@@ -1,0 +1,3306 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>통합 자산 관리 대시보드 (카테고리 분석)</title>
+    <!-- 폰트 및 Chart.js CDN -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0F172A;
+            --card-bg: #1E293B;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+            --accent: #3B82F6;
+            --profit: #EF4444;
+            /* 수익(빨강) */
+            --loss: #3B82F6;
+            /* 손실(파랑) */
+            --cash: #10B981;
+            /* 현금(초록) */
+            --border: #334155;
+
+            /* 카테고리별 테마 색상 */
+            --cat-general: #60A5FA;
+            /* 일반 주식 */
+            --cat-pension: #C084FC;
+            /* 연금저축 */
+            --cat-isa: #FBBF24;
+            /* ISA */
+            --cat-dc: #34D399;
+            /* 퇴직금 DC */
+            --cat-bank: #818CF8;
+            /* 예적금 */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #60A5FA, #A78BFA);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            gap: 1.25rem;
+            grid-template-columns: repeat(12, 1fr);
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1023px) {
+            .grid {
+                display: flex;
+                flex-direction: column;
+            }
+        }
+
+        .col-12 {
+            grid-column: span 12;
+        }
+
+        .col-6 {
+            grid-column: span 6;
+        }
+
+        .col-4 {
+            grid-column: span 4;
+        }
+
+        .col-3 {
+            grid-column: span 3;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 1.2rem;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 폼 디자인 */
+        .input-form {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 130px;
+        }
+
+        .input-group label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+        }
+
+        .input-group input,
+        .input-group select {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group select option {
+            background: var(--card-bg);
+            color: var(--text-main);
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            border-color: var(--accent);
+        }
+
+        .input-group input[readonly] {
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            border-color: var(--border);
+        }
+
+        .submit-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            height: 45px;
+            white-space: nowrap;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        /* 요약 카드 */
+        .summary-card {
+            text-align: center;
+            padding: 2rem 1rem;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-title {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            z-index: 1;
+            position: relative;
+        }
+
+        .summary-amount {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.05rem;
+            z-index: 1;
+            position: relative;
+        }
+
+        /* 테이블 공통 디자인 */
+        .table-area {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            /* 열 너비 고정! */
+        }
+
+        th,
+        td {
+            padding: 0.75rem 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+            white-space: normal;
+            /* 긴 글자 줄바꿈 허용 */
+            word-break: keep-all;
+            /* 단어 단위로 예쁘게 끊기 */
+            overflow-wrap: break-word;
+            /* 칸 넘침 방지 */
+        }
+
+        th {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        /* 거래 내역 고정 높이 보정을 위한 전용 스타일 */
+        .history-row {
+            height: 65px;
+            /* 데이터 내용에 관계없이 일관된 높이 보장 */
+        }
+
+        .history-row td {
+            vertical-align: middle;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        /* 폰트 및 유틸리티 */
+        .profit-text {
+            color: var(--profit) !important;
+        }
+
+        .loss-text {
+            color: var(--loss) !important;
+        }
+
+        .cash-text {
+            color: var(--cash) !important;
+        }
+
+        .font-bold {
+            font-weight: 600;
+        }
+
+        .delete-btn {
+            background: transparent;
+            border: 1px solid var(--profit);
+            color: var(--profit);
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.8rem;
+        }
+
+        .delete-btn:hover {
+            background: var(--profit);
+            color: #fff;
+        }
+
+        /* 카테고리 태그 뱃지 UI */
+        .tag {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+            white-space: nowrap;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .tag-일반 {
+            background: rgba(96, 165, 250, 0.1);
+            border-color: rgba(96, 165, 250, 0.4);
+            color: var(--cat-general);
+        }
+
+        .tag-연금 {
+            background: rgba(192, 132, 252, 0.1);
+            border-color: rgba(192, 132, 252, 0.4);
+            color: var(--cat-pension);
+        }
+
+        .tag-ISA {
+            background: rgba(251, 191, 36, 0.1);
+            border-color: rgba(251, 191, 36, 0.4);
+            color: var(--cat-isa);
+        }
+
+        .tag-DC {
+            background: rgba(52, 211, 153, 0.1);
+            border-color: rgba(52, 211, 153, 0.4);
+            color: var(--cat-dc);
+        }
+
+        .tag-예적금 {
+            background: rgba(129, 140, 248, 0.1);
+            border-color: rgba(129, 140, 248, 0.4);
+            color: var(--cat-bank);
+        }
+
+        .tag-default {
+            background: rgba(148, 163, 184, 0.1);
+            border-color: rgba(148, 163, 184, 0.4);
+            color: #94A3B8;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 320px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        /* 프리미엄 요약 카드 디자인 스타일 */
+        .summary-container {
+            margin-bottom: 2rem;
+        }
+
+        .hero-card {
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2.5rem !important;
+            text-align: center;
+        }
+
+        .hero-card::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+            z-index: 0;
+        }
+
+        .hero-title {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+            margin-bottom: 0.5rem;
+            z-index: 1;
+        }
+
+        .hero-amount {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #F8FAFC, #94A3B8);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            z-index: 1;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .sub-card {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1.25rem;
+            border-radius: 12px;
+            transition: transform 0.2s, background 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 100px;
+        }
+
+        /* 중앙 강조 카드 스타일 */
+        .special-card {
+            background: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .special-card .sub-title {
+            color: #60A5FA;
+            font-weight: 700;
+        }
+
+        .special-card .sub-amount {
+            font-size: 1.5rem;
+            background: linear-gradient(to right, #ffffff, #cbd5e1);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sub-card:hover {
+            transform: translateY(-2px);
+            background: rgba(30, 41, 59, 0.8);
+        }
+
+        .sub-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .sub-amount {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .trend-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 20px;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        @media (max-width: 1023px) {
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .hero-amount {
+                font-size: 2.2rem;
+            }
+        }
+
+        /* 데이터 관리 섹션 스타일 */
+        .data-management-card {
+            margin-top: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .data-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .btn-backup {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--cash);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-backup:hover {
+            background: var(--cash);
+            color: #fff;
+        }
+
+        .btn-restore {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-restore:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-reset {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--profit);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-reset:hover {
+            background: var(--profit);
+            color: #fff;
+        }
+
+        /* 페이지네이션 스타일 */
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-bottom: 0.5rem;
+        }
+
+        .page-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .page-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        /* ===== 탭 네비게이션 스타일 ===== */
+        .tab-navigation {
+            display: flex;
+            gap: 0;
+            margin-bottom: 0;
+            border-bottom: 2px solid var(--border);
+            position: relative;
+        }
+
+        .tab-btn {
+            position: relative;
+            padding: 1rem 2rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-btn .tab-badge {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent);
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .tab-btn.active .tab-badge {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .tab-content {
+            display: none;
+            animation: tabFadeIn 0.35s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes tabFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== 메인 탭 네비게이션 스타일 (최상위) ===== */
+        .main-tab-navigation {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            padding: 0.5rem;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .main-tab-btn {
+            position: relative;
+            flex: 1;
+            padding: 1rem 2rem;
+            background: transparent;
+            border: none;
+            border-radius: 12px;
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.35s ease;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+        }
+
+        .main-tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        .main-tab-btn.active {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%);
+            color: #F8FAFC;
+            box-shadow: 0 4px 15px -3px rgba(59, 130, 246, 0.25);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .main-tab-btn .main-tab-icon {
+            font-size: 1.3rem;
+        }
+
+        .main-tab-btn .main-tab-label {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            line-height: 1.3;
+        }
+
+        .main-tab-btn .main-tab-label small {
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: var(--text-muted);
+            opacity: 0.8;
+        }
+
+        .main-tab-btn.active .main-tab-label small {
+            color: rgba(248, 250, 252, 0.7);
+        }
+
+        .main-tab-content-wrapper {
+            display: none;
+            animation: mainTabFadeIn 0.4s ease-out;
+        }
+
+        .main-tab-content-wrapper.active {
+            display: block;
+        }
+
+        @keyframes mainTabFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 1023px) {
+            .main-tab-btn {
+                padding: 0.8rem 1rem;
+                font-size: 0.9rem;
+            }
+            .main-tab-btn .main-tab-label small {
+                display: none;
+            }
+        }
+
+        /* 모달 레이아웃 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 420px;
+            padding: 1.25rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="dashboard-header">
+        <div class="dashboard-title">통합 자산 관리 대시보드 (v3.7 - 계좌별 투자 수익률 분석 및 통합 관리)</div>
+        <p style="color: var(--text-muted); margin-top: 0.5rem;">특성별 계좌 관리부터 네이버 금융 기반 실시간 시세 동기화까지 통합된 프리미엄 대시보드</p>
+    </header>
+
+    <!-- ===== 메인 탭 네비게이션 (최상위) ===== -->
+    <div class="main-tab-navigation">
+        <button class="main-tab-btn active" id="main-tab-btn-overview" onclick="switchMainTab('overview')">
+            <span class="main-tab-icon">🏠</span>
+            <span class="main-tab-label">자산 현황 대시보드<small>입력 · 요약 · 차트 · 계좌 잔고</small></span>
+        </button>
+        <button class="main-tab-btn" id="main-tab-btn-detail" onclick="switchMainTab('detail')">
+            <span class="main-tab-icon">📋</span>
+            <span class="main-tab-label">자산 상세 및 거래 내역<small>주식 상세 · 입출금 이동 내역</small></span>
+        </button>
+    </div>
+
+    <!-- ===== 메인 탭 1: 자산 현황 대시보드 ===== -->
+    <div class="main-tab-content-wrapper active" id="main-tab-overview">
+
+    <!-- 1. 입력 폼 섹션 (3분할: 계좌/매수/자금 이동) -->
+    <div class="grid">
+        <!-- 계좌 개설/입금 폼 -->
+        <div class="card col-4">
+            <div class="card-title">💵 계좌 관리 (신규/추가입금)</div>
+            <form id="account-form" class="input-form">
+                <div class="input-group" style="width: 100%;">
+                    <label for="acc-date">거래 날짜</label>
+                    <input type="date" id="acc-date" required />
+                </div>
+                <div class="input-group" style="width: 100%;">
+                    <label for="acc-name">계좌 이름 (은행/증권사명)</label>
+                    <input type="text" id="acc-name" placeholder="예: 신한은행" list="account-names-list" required />
+                    <datalist id="account-names-list"></datalist>
+                </div>
+                <!-- 💡 카테고리 선택 -->
+                <div class="input-group" style="width: 100%;">
+                    <label for="acc-category">계좌 성격 (카테고리)</label>
+                    <select id="acc-category" required>
+                        <option value="일반 주식 계좌">일반 주식 계좌</option>
+                        <option value="연금저축계좌">연금저축계좌</option>
+                        <option value="ISA 계좌">ISA 계좌</option>
+                        <option value="퇴직금 DC 계좌">퇴직금 DC 계좌</option>
+                        <option value="은행 예적금">은행 예적금</option>
+                        <option value="기타">기타 계좌</option>
+                    </select>
+                </div>
+                <!-- 입금 기능 제거 (책임 분리) -->
+                <div class="input-group" style="width: 100%; display: none;">
+                    <label for="acc-balance">입금액 (원)</label>
+                    <input type="text" id="acc-balance" class="comma-input" placeholder="예: 1,000,000" value="0" />
+                </div>
+                <button type="submit" class="submit-btn" style="background-color: var(--cash); margin-top: auto;">계좌 생성</button>
+            </form>
+        </div>
+
+        <!-- 자금 이동 폼 -->
+        <div class="card col-4">
+            <div class="card-title">💸 자금 이동 (입출금/계좌이체)</div>
+            <form id="transfer-form" class="input-form">
+                <!-- 1. 날짜 -->
+                <div class="input-group" id="tf-date-group">
+                    <label for="transfer-date">거래 날짜</label>
+                    <input type="date" id="transfer-date" required />
+                </div>
+
+                <!-- 2. 종류 -->
+                <div class="input-group" id="tf-type-group">
+                    <label for="transfer-type">거래 종류</label>
+                    <select id="transfer-type" required onchange="toggleTransferFields()">
+                        <option value="deposit">외부에서 내 계좌로 입금 (+)</option>
+                        <option value="withdraw">내 계좌에서 외부로 출금 (-)</option>
+                        <option value="transfer">내 계좌 간 이체 (->)</option>
+                    </select>
+                </div>
+
+                <!-- 3. 출금계좌 (보내는 곳) -->
+                <div class="input-group" id="tf-from-group">
+                    <label id="tf-from-label" for="transfer-from">출금할 내 계좌</label>
+                    <select id="transfer-from"></select>
+                </div>
+
+                <!-- 4. 입금계좌 (받는 곳) -->
+                <div class="input-group" id="tf-to-group">
+                    <label id="tf-to-label" for="transfer-to">입금받을 내 계좌</label>
+                    <select id="transfer-to"></select>
+                </div>
+
+                <!-- 5. 금액 -->
+                <div class="input-group" id="tf-amount-group">
+                    <label for="transfer-amount">금액 (원)</label>
+                    <input type="text" id="transfer-amount" class="comma-input" placeholder="예: 50,000" required />
+                </div>
+
+                <!-- 6. 출금처 -->
+                <div class="input-group" id="tf-destination-group">
+                    <label for="transfer-destination">출금처 (나가는 곳)</label>
+                    <input type="text" id="transfer-destination" placeholder="예: 식비/월세" />
+                </div>
+
+                <button type="submit" class="submit-btn"
+                    style="background-color: var(--cat-pension); margin-top: auto; width: 100%;">자금 이동 실행</button>
+            </form>
+        </div>
+
+        <!-- 주식 자산 매수 폼 (현금 연동) -->
+        <div class="card col-4">
+            <div class="card-title">📈 주식 매수 (결제계좌 차감)</div>
+            <form id="stock-form" class="input-form">
+                <div class="input-group" style="flex: 0 0 100%; width: 100%;">
+                    <label for="stock-name">매수 종목명</label>
+                    <input type="text" id="stock-name" placeholder="예: 삼성전자 (005930)" list="stock-list" required />
+                    <datalist id="stock-list"></datalist>
+                </div>
+                <!-- 💡 신규 기능: 종목코드 (6자리 숫자) 추출 필드 -->
+                <div class="input-group" style="width: 100%;">
+                    <label for="stock-ticker">종목코드 (6자리 숫자)</label>
+                    <input type="text" id="stock-ticker" placeholder="종목명에 6자리 포함 시 자동 추출" />
+                </div>
+                <div class="input-group" style="width: 48%;">
+                    <label for="quantity">매수 수량</label>
+                    <input type="text" id="quantity" class="comma-input" placeholder="0" required />
+                </div>
+                <div class="input-group" style="width: 48%;">
+                    <label for="buy-price">매수 평단가 (원)</label>
+                    <input type="text" id="buy-price" class="comma-input" placeholder="예: 70,000" required />
+                </div>
+                <div class="input-group" style="width: 48%;">
+                    <label for="current-price">현재 시세 (단가)</label>
+                    <input type="text" id="current-price" class="comma-input" placeholder="예: 80,000" required />
+                </div>
+                <div class="input-group" style="width: 48%;">
+                    <label for="commission">제세금/수수료 (원)</label>
+                    <input type="text" id="commission" class="comma-input" placeholder="0" />
+                </div>
+                <div class="input-group" style="width: 100%;">
+                    <label for="invest-amount">총 투자액 (계좌차감)</label>
+                    <input type="text" id="invest-amount" placeholder="자동 소요 금액" readonly />
+                </div>
+
+                <div class="input-group" style="width: 100%;">
+                    <label for="stock-date">매수 날짜</label>
+                    <input type="date" id="stock-date" required />
+                </div>
+                <!-- 결제 계좌 선택 Dropdown -->
+                <div class="input-group" style="width:100%;">
+                    <label for="payment-account">결제(출금) 대상 계좌 선택</label>
+                    <select id="payment-account" required>
+                        <!-- JS 실시간 렌더링 (카테고리/잔고 표시) -->
+                    </select>
+                </div>
+                <button type="submit" class="submit-btn" style="background-color: var(--accent); margin-top: auto;">주식
+                    연동 매수</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. 프리미엄 데이터 요약 섹션 (1열 5분할) -->
+    <div class="summary-container">
+        <!-- 💡 실시간 시세 동기화 버튼 배치 -->
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem; padding: 0 1rem;">
+            <button id="sync-prices-btn" onclick="syncAllPrices()" class="submit-btn"
+                style="width: auto; background: var(--cat-dc); height: 38px; padding: 0 1.2rem; font-size: 0.85rem;">🔄
+                실시간 시세 동기화</button>
+        </div>
+        <div class="summary-grid">
+            <!-- 전체 자산 총액 (가장 먼저 강조) -->
+            <div class="sub-card special-card">
+                <div class="sub-title">💎 전체 자산 총액 (현금+평가액)</div>
+                <div class="sub-amount" id="sum-total-asset">0원</div>
+            </div>
+            <!-- 총 누적 순입금액(원금) -->
+            <div class="sub-card">
+                <div class="sub-title">💵 총 누적 순입금액 (원금)</div>
+                <div class="sub-amount cash-text" id="sum-net-deposit">0원</div>
+            </div>
+            <!-- 은행 예적금 -->
+            <div class="sub-card">
+                <div class="sub-title">🏛️ 총 은행 예적금</div>
+                <div class="sub-amount cash-text" id="sum-bank-cash">0원</div>
+            </div>
+            <!-- 투자 가능 현금 -->
+            <div class="sub-card">
+                <div class="sub-title">💰 투자 가능 현금 (입출금)</div>
+                <div class="sub-amount cash-text" id="sum-invest-cash">0원</div>
+            </div>
+            <!-- 주식 평가액 -->
+            <div class="sub-card">
+                <div class="sub-title">📈 총 주식 평가액</div>
+                <div class="sub-amount" id="sum-total-stock">0원</div>
+            </div>
+            <!-- 미실현 손익 (보유 주식 평가) -->
+            <div class="sub-card">
+                <div class="sub-title">📉 미실현 손익 (보유 중)</div>
+                <div class="sub-amount" id="sum-unrealized-pnl">0원</div>
+            </div>
+            <!-- 실현 손익 (매도 확정) -->
+            <div class="sub-card">
+                <div class="sub-title">✅ 실현 손익 (매도 확정)</div>
+                <div class="sub-amount" id="sum-realized-pnl">0원</div>
+            </div>
+            <!-- 총 투자 손익 (원금 대비) -->
+            <div class="sub-card">
+                <div class="sub-title">📊 총 투자 손익 (원금 대비)</div>
+                <div class="sub-amount" id="sum-total-profit">0원</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 차트 분석 영역 (2분할: 종목별 / 카테고리별 비중) -->
+    <!-- 💡 신규 기능: 카테고리 분석 차트 삽입 -->
+    <div class="grid">
+        <!-- 개별 종목 전체 자산 비중 -->
+        <div class="card col-6">
+            <div class="card-title">내 자산 포트폴리오 (종목 기준 비중)</div>
+            <div class="chart-container">
+                <canvas id="portfolioChart"></canvas>
+            </div>
+        </div>
+        <!-- 성격별 목적 자산 비중 -->
+        <div class="card col-6">
+            <div class="card-title">내 자산 목적별 분석 (계좌 카테고리 비중)</div>
+            <div class="chart-container">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+        <!-- 현금흐름 분석: 원금 vs 수익 분리 막대그래프 -->
+        <div class="card col-12">
+            <div class="card-title">💰 계좌별 현금흐름 분석 (순입금 vs 수익/손실)</div>
+            <div class="chart-container" style="height: 320px;">
+                <canvas id="cashflowChart"></canvas>
+            </div>
+        </div>
+        <!-- 시계열 분석: 누적 순입금 vs 총자산 추이 라인 차트 -->
+        <div class="card col-12">
+            <div class="card-title">📅 시간 흐름별 자산 추이 (누적 순입금 vs 총자산)</div>
+            <div class="chart-container" style="height: 340px;">
+                <canvas id="timeSeriesChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 하단 테이블 목록 영역 -->
+    <div class="grid">
+        <!-- 계좌 현황 테이블 (항상 표시) -->
+        <div class="card col-12">
+            <div class="card-title">계좌별 투자 성과 분석 (현금흐름 기반)</div>
+            <div class="table-area">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 12%;">계좌 성격</th>
+                            <th style="width: 14%;">계좌 이름</th>
+                            <th class="text-right" style="width: 16%;">누적 순입금 (원금)</th>
+                            <th class="text-right" style="width: 16%;">현재 총자산</th>
+                            <th class="text-right" style="width: 14%;">실제 순수익금</th>
+                            <th class="text-right" style="width: 14%;">순수익률</th>
+                            <th class="text-center" style="width: 14%;">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="acc-table-body">
+                        <!-- JS 실시간 렌더링 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4-1. 원본 데이터 테이블 영역 (hidden - renderTables가 직접 렌더링하는 원본 DOM, mirrorDetailTables에서 메인탭2로 복사) -->
+    <div style="display: none;">
+        <table><tbody id="stock-table-body"></tbody></table>
+        <div id="stock-pagination"></div>
+        <table><tbody id="history-table-body"></tbody></table>
+        <div id="history-pagination"></div>
+        <table><tbody id="trade-table-body"></tbody></table>
+        <div id="trade-pagination"></div>
+    </div>
+
+    <!-- 5. 데이터 관리 섹션 -->
+    <div class="grid">
+        <div class="card col-12 data-management-card">
+            <div class="card-title">⚙️ 데이터 관리 (백업/복구/초기화)</div>
+            <div class="btn-group">
+                <button class="data-btn btn-backup" onclick="backupData()">📥 자료백업</button>
+                <button class="data-btn btn-restore" onclick="triggerRestore()">📤 자료복구</button>
+                <button class="data-btn btn-reset" onclick="resetAllData()">⚠️ 전체 데이터 초기화</button>
+            </div>
+            <input type="file" id="restore-file" style="display: none;" accept=".json" onchange="restoreData(event)">
+        </div>
+    </div>
+
+    </div> <!-- /main-tab-overview -->
+
+    <!-- ===== 메인 탭 2: 자산 상세 및 거래 내역 ===== -->
+    <div class="main-tab-content-wrapper" id="main-tab-detail">
+
+    <!-- 4-1. 탭 분리 영역: 주식 상세 내역 / 입출금 이동 내역 -->
+    <div class="grid">
+        <div class="card col-12" style="padding: 0; overflow: hidden;">
+            <!-- 탭 네비게이션 -->
+            <div class="tab-navigation" style="padding: 0 1.5rem;">
+                <button class="tab-btn active" id="tab-btn-stock" onclick="switchTab('stock')">
+                    📈 주식 자산 실시간 상세 내역
+                    <span class="tab-badge" id="tab-badge-stock">0</span>
+                </button>
+                <button class="tab-btn" id="tab-btn-history" onclick="switchTab('history')">
+                    🔄 자금 이동 내역
+                    <span class="tab-badge" id="tab-badge-history">0</span>
+                </button>
+                <button class="tab-btn" id="tab-btn-trade" onclick="switchTab('trade')">
+                    🧾 주식 거래 내역
+                    <span class="tab-badge" id="tab-badge-trade">0</span>
+                </button>
+            </div>
+
+            <!-- 탭 콘텐츠: 주식 상세 내역 -->
+            <div class="tab-content active" id="tab-content-stock" style="padding: 1.5rem;">
+                <div class="table-area">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 12%;">결제된 계좌 (분류)</th>
+                                <th style="width: 15%;">매수 종목명</th>
+                                <th class="text-right" style="width: 10%;">현재 시세</th>
+                                <th class="text-right" style="width: 9%;">보유 수량</th>
+                                <th class="text-right" style="width: 11%;">투자 원금</th>
+                                <th class="text-right" style="width: 11%;">평가 금액</th>
+                                <th class="text-right" style="width: 11%;">손익금</th>
+                                <th class="text-right" style="width: 9%;">수익률</th>
+                                <th class="text-center" style="width: 12%;">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-table-body-detail">
+                            <!-- JS 실시간 렌더링 (메인탭2 미러) -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- 페이지네이션 컨트롤 -->
+                <div id="stock-pagination-detail" class="pagination-container"></div>
+            </div>
+
+            <!-- 탭 콘텐츠: 입출금 이동 내역 -->
+            <div class="tab-content" id="tab-content-history" style="padding: 1.5rem;">
+                <div id="history-card">
+                    <div class="table-area">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">날짜</th>
+                                    <th style="width: 20%;">출금처</th>
+                                    <th style="width: 20%;">입금처</th>
+                                    <th class="text-right" style="width: 20%;">금액 (KRW)</th>
+                                    <th class="text-center" style="width: 15%;">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body-detail">
+                                <!-- JS 실시간 렌더링 (메인탭2 미러) -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- 페이지네이션 컨트롤 -->
+                    <div id="history-pagination-detail" class="pagination-container"></div>
+                </div>
+            </div>
+
+            <!-- 탭 콘텐츠: 주식 거래 내역 -->
+            <div class="tab-content" id="tab-content-trade" style="padding: 1.5rem;">
+                <div id="trade-card">
+                    <div class="table-area">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">날짜</th>
+                                    <th style="width: 20%;">출금처</th>
+                                    <th style="width: 20%;">입금처</th>
+                                    <th class="text-right" style="width: 20%;">금액 (KRW)</th>
+                                    <th class="text-center" style="width: 15%;">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trade-table-body-detail">
+                                <!-- JS 실시간 렌더링 (메인탭2 미러) -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- 페이지네이션 컨트롤 -->
+                    <div id="trade-pagination-detail" class="pagination-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5-B. 데이터 관리 섹션 (메인 탭 2 복사본) -->
+    <div class="grid">
+        <div class="card col-12 data-management-card">
+            <div class="card-title">⚙️ 데이터 관리 (백업/복구/초기화)</div>
+            <div class="btn-group">
+                <button class="data-btn btn-backup" onclick="backupData()">📥 자료백업</button>
+                <button class="data-btn btn-restore" onclick="triggerRestore()">📤 자료복구</button>
+                <button class="data-btn btn-reset" onclick="resetAllData()">⚠️ 전체 데이터 초기화</button>
+            </div>
+        </div>
+    </div>
+
+    </div> <!-- /main-tab-detail -->
+
+    <!-- 📉 주식 부분 매도 전용 모달 -->
+    <div id="sell-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content card" style="padding: 1.25rem; max-height: 50vh; overflow-y: auto;">
+            <div class="card-title" style="margin-bottom: 1rem;">📉 주식 부분 매도 처리</div>
+            <div class="input-form" style="gap: 0.8rem;">
+                <div class="input-group">
+                    <label style="margin-bottom: 0.2rem;">종목명</label>
+                    <input type="text" id="modal-stock-name" readonly />
+                </div>
+                <div class="grid" style="gap:8px; margin-bottom: 0;">
+                    <div class="input-group col-6">
+                        <label style="margin-bottom: 0.2rem;">현재 보유 수량</label>
+                        <input type="text" id="modal-max-qty" readonly />
+                    </div>
+                    <div class="input-group col-6">
+                        <label style="margin-bottom: 0.2rem;">매도할 수량</label>
+                        <input type="text" id="modal-sell-qty" class="comma-input" placeholder="0" required />
+                    </div>
+                </div>
+                <div class="grid" style="gap:8px; margin-bottom: 0;">
+                    <div class="input-group col-6">
+                        <label style="margin-bottom: 0.2rem;">매도 단가</label>
+                        <input type="text" id="modal-sell-price" class="comma-input" placeholder="0" required />
+                    </div>
+                    <div class="input-group col-6">
+                        <label style="margin-bottom: 0.2rem;">매도 수수료</label>
+                        <input type="text" id="modal-sell-commission" class="comma-input" placeholder="0" required />
+                    </div>
+                </div>
+                <!-- [추가] 매도 날짜 입력 필드 -->
+                <div class="input-group" style="width: 100%;">
+                    <label style="margin-bottom: 0.2rem;">매도 날짜</label>
+                    <input type="date" id="modal-sell-date" required />
+                </div>
+                <div class="btn-group" style="margin-top:12px; display:flex; gap:10px;">
+                    <button class="data-btn btn-backup" onclick="executeSell()" style="flex:1;">매도 실행</button>
+                    <button class="data-btn btn-reset" onclick="closeSellModal()" style="flex:1;">취소</button>
+                </div>
+            </div>
+            <input type="hidden" id="modal-stock-id" />
+        </div>
+    </div>
+
+    <script>
+        // 전역 설정: Chart.js 설정
+        Chart.defaults.color = '#94A3B8';
+        Chart.defaults.font.family = 'Inter, sans-serif';
+        Chart.defaults.plugins.tooltip.padding = 10;
+        Chart.defaults.plugins.tooltip.titleFont = { size: 13, family: 'Inter' };
+
+        // =========================================================================
+        // [1] 데이터 보존 전략 (Local Storage + Array State)
+        // accounts 구조: { id, name, category, balance }
+        // stocks 구조: { id, name, investAmount, currentPrice, quantity, evaluationAmount, profitLoss, accountName, accountCategory }
+        // =========================================================================
+        let accounts = JSON.parse(localStorage.getItem('dash_accounts_v3')) || [];
+        let stocks = JSON.parse(localStorage.getItem('dash_stocks_v3')) || [];
+        let transactionHistory = JSON.parse(localStorage.getItem('dash_history_v3')) || [];
+
+        // [신규] 원장 기반 잔고 동기화 (단일 진실 공급원)
+        function syncBalancesFromLedger() {
+            try {
+                // 1. 모든 계좌 잔고를 0으로 초기화
+                accounts.forEach(a => {
+                    if (!a) return;
+                    a.balance = 0;
+                    if (a.isActive === undefined) a.isActive = true;
+                });
+
+                // 2. transactionHistory를 순회하며 잔고 재계산
+                transactionHistory.forEach(h => {
+                    const txType = getHistoryType(h);
+                    const amount = Number(h.amount) || 0;
+
+                    if (txType === TX_TYPE.EXTERNAL_IN && h.toAccId) {
+                        let acc = accounts.find(a => a && a.id === h.toAccId);
+                        if (acc) acc.balance += amount;
+                    } else if (txType === TX_TYPE.EXTERNAL_OUT && h.fromAccId) {
+                        let acc = accounts.find(a => a && a.id === h.fromAccId);
+                        if (acc) acc.balance -= amount;
+                    } else if (txType === TX_TYPE.INTERNAL_TRANSFER) {
+                        if (h.fromAccId) {
+                            let fromAcc = accounts.find(a => a && a.id === h.fromAccId);
+                            if (fromAcc) fromAcc.balance -= amount;
+                        }
+                        if (h.toAccId) {
+                            let toAcc = accounts.find(a => a && a.id === h.toAccId);
+                            if (toAcc) toAcc.balance += amount;
+                        }
+                    } else if (txType === TX_TYPE.STOCK_BUY && h.fromAccId) {
+                        let acc = accounts.find(a => a && a.id === h.fromAccId);
+                        if (acc) acc.balance -= amount;
+                    } else if (txType === TX_TYPE.STOCK_SELL && h.toAccId) {
+                        let acc = accounts.find(a => a && a.id === h.toAccId);
+                        if (acc) acc.balance += amount;
+                    }
+                });
+
+                // 3. 복구 대응: 잔고가 0보다 큰 계좌는 무조건 활성화
+                accounts.forEach(a => {
+                    if (!a) return;
+                    if (a.balance > 0) {
+                        a.isActive = true;
+                    }
+                });
+            } catch (err) {
+                console.error('[syncBalancesFromLedger] 원장 동기화 중 치명적 오류:', err);
+            }
+        }
+
+        // 데이터 동기화 (0원 계좌 자동 삭제 포함)
+        function saveData() {
+            syncBalancesFromLedger(); // 저장 전 무조건 원장 동기화 강제
+            // [수정] 데이터 자체는 삭제하지 않고 유지 (UI에서 필터링)
+            localStorage.setItem('dash_accounts_v3', JSON.stringify(accounts));
+            localStorage.setItem('dash_stocks_v3', JSON.stringify(stocks));
+            localStorage.setItem('dash_history_v3', JSON.stringify(transactionHistory));
+        }
+
+        // DOM 요소 캐싱
+        const accForm = document.getElementById('account-form');
+        const stockForm = document.getElementById('stock-form');
+        const paymentAccSelect = document.getElementById('payment-account');
+        const accTbody = document.getElementById('acc-table-body');
+        const stockTbody = document.getElementById('stock-table-body');
+        const historyTbody = document.getElementById('history-table-body');
+        const transferForm = document.getElementById('transfer-form');
+
+        let doughnutChart = null; // 종목별 차트 전역 인스턴스
+        let catChart = null;      // 카테고리별 차트 전역 인스턴스
+        let cashflowChart = null; // 현금흐름 분석 차트 전역 인스턴스
+        let timeSeriesChart = null; // 시계열 라인 차트 전역 인스턴스
+
+        // =========================================================================
+        // [1-TX] Transaction Type Enum (데이터 정규화 핵심)
+        // =========================================================================
+        const TX_TYPE = Object.freeze({
+            EXTERNAL_IN: 'EXTERNAL_IN',         // 외부 → 내 계좌 입금
+            EXTERNAL_OUT: 'EXTERNAL_OUT',       // 내 계좌 → 외부 출금
+            INTERNAL_TRANSFER: 'INTERNAL_TRANSFER', // 내 계좌 간 이체
+            STOCK_BUY: 'STOCK_BUY',             // 주식 매수
+            STOCK_SELL: 'STOCK_SELL'             // 주식 매도
+        });
+
+        // [1-TX-F] 과거 데이터 호환 Fallback 헬퍼 (type 필드 없는 v3.7 이전 데이터 대응)
+        function getHistoryType(h) {
+            if (h.type) return h.type; // 신규 데이터
+            // 과거 데이터 하드코딩 문자열 기반 Fallback
+            if (h.isStockPurchase) return TX_TYPE.STOCK_BUY;
+            if (h.isStockSell) return TX_TYPE.STOCK_SELL;
+            if (h.from && (h.from.includes('외부') || h.from === '외부 은행 (입금)') && h.toAccId && !h.fromAccId) return TX_TYPE.EXTERNAL_IN;
+            if (h.fromAccId && h.to && (h.to === '외부 (출금)' || h.to.includes('외부')) && !h.toAccId && !h.isStockPurchase && !h.isStockSell) return TX_TYPE.EXTERNAL_OUT;
+            if (h.fromAccId && h.toAccId && !h.isStockPurchase && !h.isStockSell) return TX_TYPE.INTERNAL_TRANSFER;
+            // 최후 Fallback: 입금 패턴 감지
+            if (h.from && h.from.includes('외부') && h.toAccId) return TX_TYPE.EXTERNAL_IN;
+            return null; // 분류 불가
+        }
+
+        // =========================================================================
+        // [1-A] 순입금액(원금) 계산 헬퍼 함수 (Cash Flow 분석 핵심 - type 기반 정규화)
+        // transactionHistory를 순회하여 계좌별 순입금액을 Map으로 반환
+        // =========================================================================
+        function calcNetDeposits() {
+            // key: accId, value: 순입금 누적액
+            const netMap = {};
+            accounts.forEach(a => { if (a) netMap[a.id] = 0; });
+
+            transactionHistory.forEach(h => {
+                const txType = getHistoryType(h);
+                switch (txType) {
+                    case TX_TYPE.EXTERNAL_IN:
+                        // 외부 → 내 계좌 입금 (순입금 증가)
+                        if (h.toAccId) {
+                            if (netMap[h.toAccId] === undefined) netMap[h.toAccId] = 0;
+                            netMap[h.toAccId] += h.amount;
+                        }
+                        break;
+                    case TX_TYPE.EXTERNAL_OUT:
+                        // 내 계좌 → 외부 출금 (순입금 감소)
+                        if (h.fromAccId) {
+                            if (netMap[h.fromAccId] === undefined) netMap[h.fromAccId] = 0;
+                            netMap[h.fromAccId] -= h.amount;
+                        }
+                        break;
+                    case TX_TYPE.INTERNAL_TRANSFER:
+                        // 내 계좌 간 이체: 출금 계좌 감소, 입금 계좌 증가
+                        if (h.fromAccId) {
+                            if (netMap[h.fromAccId] === undefined) netMap[h.fromAccId] = 0;
+                            netMap[h.fromAccId] -= h.amount;
+                        }
+                        if (h.toAccId) {
+                            if (netMap[h.toAccId] === undefined) netMap[h.toAccId] = 0;
+                            netMap[h.toAccId] += h.amount;
+                        }
+                        break;
+                    case TX_TYPE.STOCK_BUY:
+                    case TX_TYPE.STOCK_SELL:
+                        // 자산 이동이므로 순입금 변화 없음
+                        break;
+                    default:
+                        // 분류 불가 → 기존 하드코딩 Fallback
+                        if (h.from && (h.from.includes('외부') || h.from === '외부 은행 (입금)') && h.toAccId) {
+                            if (netMap[h.toAccId] === undefined) netMap[h.toAccId] = 0;
+                            netMap[h.toAccId] += h.amount;
+                        }
+                        break;
+                }
+            });
+            return netMap;
+        }
+
+        // =========================================================================
+        // [1-B] 시계열 데이터 변환 헬퍼 (날짜별 누적 순입금 vs 누적 총자산)
+        // =========================================================================
+        function calcTimeSeriesData() {
+            const sorted = [...transactionHistory].sort((a, b) => a.date.localeCompare(b.date));
+            if (sorted.length === 0) return { labels: [], deposits: [], assets: [] };
+
+            const dailyMap = {}; // { date: { deposit: 누적순입금변동, asset: 누적총자산변동 } }
+
+            let cumDeposit = 0;
+
+            sorted.forEach(h => {
+                const txType = getHistoryType(h);
+                const d = h.date;
+                if (!dailyMap[d]) dailyMap[d] = { deposit: 0, asset: 0 };
+
+                switch (txType) {
+                    case TX_TYPE.EXTERNAL_IN:
+                        cumDeposit += h.amount;
+                        break;
+                    case TX_TYPE.EXTERNAL_OUT:
+                        cumDeposit -= h.amount;
+                        break;
+                    case TX_TYPE.INTERNAL_TRANSFER:
+                        // 계좌 간 이체: 전체 순입금 총액에는 영향 없음 (Zero-sum)
+                        break;
+                    case TX_TYPE.STOCK_BUY:
+                    case TX_TYPE.STOCK_SELL:
+                        // 자산 이동: 순입금 변화 없음
+                        break;
+                }
+                dailyMap[d].deposit = cumDeposit;
+            });
+
+            // 날짜별 총자산 = 해당 시점 순입금 (근사치, 현재 시세 미반영)
+            // 최종 날짜(현재)에는 실제 총자산 사용
+            const labels = Object.keys(dailyMap).sort();
+            const deposits = labels.map(d => dailyMap[d].deposit);
+
+            // 현재 총자산 계산
+            let currentTotalAsset = 0;
+            accounts.forEach(a => { currentTotalAsset += a.balance; });
+            stocks.forEach(s => { currentTotalAsset += s.evaluationAmount; });
+
+            // 자산 라인: 최종 날짜 = 실제 총자산, 이전 날짜는 순입금 기준 근사 추정
+            const totalNetNow = deposits[deposits.length - 1] || 0;
+            const assetGap = currentTotalAsset - totalNetNow; // 현재 수익/손실 갭
+
+            const assets = deposits.map((dep, i) => {
+                if (i === deposits.length - 1) return currentTotalAsset;
+                // 과거 자산 근사: 순입금 + 비례 수익 적용
+                const ratio = totalNetNow > 0 ? dep / totalNetNow : 0;
+                return Math.round(dep + (assetGap * ratio));
+            });
+
+            return { labels, deposits, assets };
+        }
+
+        // 페이지네이션 상태
+        let currentHistoryPage = 1;
+        let currentTradePage = 1;
+        let currentStockPage = 1;
+        const historyItemsPerPage = 10;
+        const stockItemsPerPage = 9;
+
+        // 이체 폼 껐다 켜기 (평탄화된 레이아웃 정밀 제어)
+        function toggleTransferFields() {
+            const type = document.getElementById('transfer-type').value;
+
+            // 모든 그룹 요소 참조
+            const dateGrp = document.getElementById('tf-date-group');
+            const typeGrp = document.getElementById('tf-type-group');
+            const fromGrp = document.getElementById('tf-from-group');
+            const toGrp = document.getElementById('tf-to-group');
+            const amountGrp = document.getElementById('tf-amount-group');
+            const destGrp = document.getElementById('tf-destination-group');
+
+            // 입력 필드 참조 (required 설정을 위해)
+            const fromSelect = document.getElementById('transfer-from');
+            const toSelect = document.getElementById('transfer-to');
+            const destInput = document.getElementById('transfer-destination');
+
+            // 라벨 및 초기 스타일링 함수 (min-width 제어 추가)
+            const setField = (el, show, width, minWidth = '130px') => {
+                if (!el) return;
+                el.style.display = show ? 'flex' : 'none';
+                if (show && width) {
+                    el.style.width = width;
+                    el.style.flex = 'none';
+                    el.style.minWidth = minWidth; // 줄바꿈 방지를 위해 min-width 조정
+                }
+            };
+
+            const fromLabel = document.getElementById('tf-from-label');
+            const toLabel = document.getElementById('tf-to-label');
+
+            if (type === 'deposit') {
+                // 이미지 방식 (Step 1230): 1줄 3개, 2줄 1개
+                // 3열 배치 시 좁은 화면 줄바꿈 방지를 위해 min-width를 축소 (100px)
+                setField(dateGrp, true, 'calc(33.33% - 12px)', '100px');
+                setField(typeGrp, true, 'calc(33.33% - 12px)', '100px');
+                setField(toGrp, true, 'calc(33.33% - 12px)', '100px');
+                setField(amountGrp, true, '100%');
+                setField(fromGrp, false);
+                setField(destGrp, false);
+
+                fromSelect.required = false;
+                toSelect.required = true;
+                destInput.required = false;
+                toLabel.innerText = '입금받을 내 계좌';
+            } else if (type === 'withdraw') {
+                // 이미지 방식 기반 (Step 1230): 1줄 3개, 2줄 2개
+                setField(dateGrp, true, 'calc(33.33% - 12px)', '100px');
+                setField(typeGrp, true, 'calc(33.33% - 12px)', '100px');
+                setField(fromGrp, true, 'calc(33.33% - 12px)', '100px');
+                setField(amountGrp, true, 'calc(50% - 10px)');
+                setField(destGrp, true, 'calc(50% - 10px)');
+                setField(toGrp, false);
+
+                fromSelect.required = true;
+                toSelect.required = false;
+                destInput.required = true;
+                fromLabel.innerText = '출금할 내 계좌';
+            } else if (type === 'transfer') {
+                // 이미지 방식 (Step 1247): 1줄: 날짜/종류(2열) | 2줄: 출금/입금계좌(2열) | 3줄: 금액(100%)
+                setField(dateGrp, true, 'calc(50% - 10px)');
+                setField(typeGrp, true, 'calc(50% - 10px)');
+                setField(fromGrp, true, 'calc(50% - 10px)');
+                setField(toGrp, true, 'calc(50% - 10px)');
+                setField(amountGrp, true, '100%');
+                setField(destGrp, false);
+
+                fromSelect.required = true;
+                toSelect.required = true;
+                destInput.required = false;
+                fromLabel.innerText = '보내는 내 계좌 (출금)';
+                toLabel.innerText = '받는 내 계좌 (입금)';
+            }
+        }
+        window.addEventListener('DOMContentLoaded', () => toggleTransferFields());
+
+        // [UX 개선] 천 단위 콤마 포맷팅 및 자동 계산 유틸리티
+        function formatNumberWithCommas(n) {
+            if (n === null || n === undefined || isNaN(n)) return "";
+            const parts = n.toString().split(".");
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            return parts.join(".");
+        }
+
+        function unformatNumber(s) {
+            return Number(s.toString().replace(/,/g, "")) || 0;
+        }
+
+        function applyRealtimeComma(e) {
+            let cursorPosition = e.target.selectionStart;
+            let originalLength = e.target.value.length;
+
+            let value = e.target.value.replace(/[^0-9.]/g, ""); // 숫자와 소수점만 허용
+            if (value.indexOf('.') !== value.lastIndexOf('.')) { // 소수점 중복 방지
+                value = value.slice(0, -1);
+            }
+
+            const parts = value.split(".");
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            e.target.value = parts.join(".");
+
+            // 커서 위치 보정
+            let newLength = e.target.value.length;
+            cursorPosition = cursorPosition + (newLength - originalLength);
+            e.target.setSelectionRange(cursorPosition, cursorPosition);
+
+            // 주식 폼인 경우 실시간 자동 계산 실행
+            if (['quantity', 'buy-price', 'commission'].includes(e.target.id)) {
+                updateAutoInvestment();
+            }
+
+            // 매수 평단가 입력 시 현재 시세도 자동으로 채움 (수정 가능 유지)
+            if (e.target.id === 'buy-price') {
+                document.getElementById('current-price').value = e.target.value;
+            }
+        }
+
+        function updateAutoInvestment() {
+            const qty = unformatNumber(document.getElementById('quantity').value);
+            const buyPrice = unformatNumber(document.getElementById('buy-price').value);
+            const commission = unformatNumber(document.getElementById('commission').value);
+            const total = (qty * buyPrice) + commission;
+            document.getElementById('invest-amount').value = formatNumberWithCommas(Math.round(total));
+        }
+
+        // 실시간 리스너 등록
+        document.addEventListener('input', (e) => {
+            if (e.target.classList.contains('comma-input')) {
+                applyRealtimeComma(e);
+            }
+        });
+
+        // 유틸리티 함수
+        const fmt = (n) => Math.round(n).toLocaleString('ko-KR') + '원';
+        const col = (n) => n > 0 ? 'profit-text' : (n < 0 ? 'loss-text' : '');
+        const sign = (n) => n > 0 ? '+' : '';
+
+        // UI에 카테고리 별로 다른 테마 색상을 부여하는 뱃지 렌더링 함수
+        function getCatTag(cat) {
+            if (!cat) return `<span class="tag tag-default">미분류 기타</span>`;
+            if (cat.includes('일반')) return `<span class="tag tag-일반">${cat}</span>`;
+            if (cat.includes('연금')) return `<span class="tag tag-연금">${cat}</span>`;
+            if (cat.includes('ISA')) return `<span class="tag tag-ISA">${cat}</span>`;
+            if (cat.includes('DC')) return `<span class="tag tag-DC">${cat}</span>`;
+            if (cat.includes('예적금')) return `<span class="tag tag-예적금">${cat}</span>`;
+            return `<span class="tag tag-default">${cat}</span>`;
+        }
+        // 날짜 입력 칸 초기값을 오늘로 설정하는 유틸리티
+        function initDateInputs() {
+            const today = new Date().toISOString().split('T')[0];
+            const dateIds = ['acc-date', 'stock-date', 'transfer-date'];
+            dateIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = today;
+            });
+            const commission = document.getElementById('commission');
+            if (commission) commission.value = '0';
+        }
+
+        initDateInputs();
+        renderAll();
+
+        // =========================================================================
+        // [2] 계좌 개설 (입금 기능 분리)
+        // =========================================================================
+        accForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            let name = document.getElementById('acc-name').value.trim();
+            let category = document.getElementById('acc-category').value;
+
+            let existingIdx = accounts.findIndex(a => a.name === name && a.category === category);
+
+            if (existingIdx !== -1) {
+                alert('이미 존재하는 계좌입니다.');
+                return;
+            } else {
+                const newId = Date.now();
+                accounts.push({ id: newId, name, category, balance: 0, isActive: true });
+                alert('새로운 계좌가 생성되었습니다. 자금 이동 탭에서 입금을 진행해주세요.');
+            }
+
+            saveData();
+            accForm.reset();
+            initDateInputs(); // 날짜 초기화
+            renderAll();
+        });
+
+
+        // =========================================================================
+        // [3] 주식 매수/수정 모달 관련 로직
+        // =========================================================================
+        // =========================================================================
+        // [3] 주식 매수 (결제 계좌 차감 연동 + 기록)
+        // =========================================================================
+        stockForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            let investAmount = unformatNumber(document.getElementById('invest-amount').value);
+            let accId = Number(paymentAccSelect.value);
+            if (!accId) return alert('투자 총액을 지불할 결제 계좌를 선택해 주세요!');
+
+            // 매수를 담당할 결제 계좌 찾기
+            let selectedAccount = accounts.find(a => a.id === accId);
+
+            // 잔고 부족 검증 Check
+            if (selectedAccount.balance < investAmount) {
+                return alert(`[결제 실패]\n해당 계좌의 현금 잔고가 부족합니다!\n현재 잔고: ${selectedAccount.balance.toLocaleString()}원\n부족 금액: ${(investAmount - selectedAccount.balance).toLocaleString()}원`);
+            }
+
+            // [핵심] 현금 잔고 강제 차감
+            selectedAccount.balance -= investAmount;
+
+            let name = document.getElementById('stock-name').value;
+            let buyPrice = unformatNumber(document.getElementById('buy-price').value);
+            let currentPrice = unformatNumber(document.getElementById('current-price').value);
+            let quantity = unformatNumber(document.getElementById('quantity').value);
+            let commission = unformatNumber(document.getElementById('commission').value);
+
+            let evaluationAmount = currentPrice * quantity;
+            let profitLoss = evaluationAmount - investAmount;
+
+            let ticker = document.getElementById('stock-ticker').value.trim();
+            // [개선] 기존 종목 존재 여부 확인 (Merge 로직 강화: 종목명 + 계좌명 일치 시에만 병합)
+            let existingStock = stocks.find(s => s.name === name && s.accountName === selectedAccount.name);
+
+            if (existingStock) {
+                // 기존 보유 종목이 있으면 데이터 병합 (Merge)
+                existingStock.quantity += quantity;
+                existingStock.investAmount += investAmount;
+                // 평단가 계산: 총 투자액 / 전체 수량 (반올림)
+                existingStock.buyPrice = Math.round(existingStock.investAmount / existingStock.quantity);
+                // 가장 최신 입력된 시세 및 티커로 종목 업데이트
+                existingStock.currentPrice = currentPrice;
+                existingStock.ticker = ticker || existingStock.ticker;
+                // 평가금 및 손익금 재계산
+                existingStock.evaluationAmount = existingStock.quantity * existingStock.currentPrice;
+                existingStock.profitLoss = existingStock.evaluationAmount - existingStock.investAmount;
+                existingStock.commission = (existingStock.commission || 0) + commission;
+                // 마지막 매수 계좌 정보로 갱신 (선택 사항)
+                existingStock.accountName = selectedAccount.name;
+                existingStock.accountCategory = selectedAccount.category;
+            } else {
+                // 신규 종목이면 기존처럼 추가
+                stocks.push({
+                    id: Date.now(),
+                    name: name,
+                    ticker: ticker,
+                    investAmount: investAmount,
+                    buyPrice: buyPrice,
+                    currentPrice: currentPrice,
+                    quantity: quantity,
+                    evaluationAmount: evaluationAmount,
+                    profitLoss: profitLoss,
+                    commission: commission,
+                    accountName: selectedAccount.name,
+                    accountCategory: selectedAccount.category
+                });
+            }
+
+            // 매수 내역 도출
+            let dateString = document.getElementById('stock-date').value;
+            if (!dateString) {
+                let today = new Date();
+                dateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            }
+            transactionHistory.push({
+                id: Date.now(),
+                date: dateString,
+                type: TX_TYPE.STOCK_BUY,
+                from: selectedAccount.name,
+                fromAccId: selectedAccount.id,
+                fromAccCategory: selectedAccount.category,
+                to: `주식 매수 (${name})`,
+                amount: investAmount,
+                commission: commission,
+                isStockPurchase: true,
+                stockName: name,
+                quantity: quantity
+            });
+
+            currentHistoryPage = 1; // [추가] 신규 거래 시 1페이지 리셋
+            saveData();
+            stockForm.reset();
+            initDateInputs(); // 날짜 초기화
+            renderAll();
+        });
+
+        // =========================================================================
+        // [3-2] 자금 이동 (입출금/계좌이체) 처리
+        // =========================================================================
+        if (transferForm) {
+            transferForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                let type = document.getElementById('transfer-type').value;
+                let amount = unformatNumber(document.getElementById('transfer-amount').value);
+
+                let dateString = document.getElementById('transfer-date').value;
+                if (!dateString) {
+                    let today = new Date();
+                    dateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                }
+
+                if (type === 'deposit') {
+                    let toId = Number(document.getElementById('transfer-to').value);
+                    let toAcc = accounts.find(a => a.id === toId);
+                    if (!toAcc) return alert('입금할 계좌를 선택해주세요.');
+
+                    toAcc.balance += amount;
+                    transactionHistory.push({
+                        id: Date.now(),
+                        date: dateString,
+                        type: TX_TYPE.EXTERNAL_IN,
+                        from: '외부 은행 (입금)',
+                        to: toAcc.name,
+                        toAccId: toAcc.id,
+                        toAccCategory: toAcc.category,
+                        amount: amount
+                    });
+                } else if (type === 'withdraw') {
+                    let fromId = Number(document.getElementById('transfer-from').value);
+                    let fromAcc = accounts.find(a => a.id === fromId);
+                    if (!fromAcc) return alert('출금할 계좌를 선택해주세요.');
+                    if (fromAcc.balance < amount) return alert('잔고가 부족합니다.');
+
+                    fromAcc.balance -= amount;
+                    let destination = document.getElementById('transfer-destination').value.trim() || '외부 (출금)';
+                    transactionHistory.push({
+                        id: Date.now(),
+                        date: dateString,
+                        type: TX_TYPE.EXTERNAL_OUT,
+                        from: fromAcc.name,
+                        fromAccId: fromAcc.id,
+                        fromAccCategory: fromAcc.category,
+                        to: destination,
+                        amount: amount
+                    });
+
+                    // [변경] 하드 삭제 방지 (Soft Delete): 잔고 0원 이하 시 비활성화 처리
+                    if (fromAcc.balance <= 0) {
+                        fromAcc.isActive = false;
+                    }
+                } else if (type === 'transfer') {
+                    let fromId = Number(document.getElementById('transfer-from').value);
+                    let toId = Number(document.getElementById('transfer-to').value);
+                    if (fromId === toId) return alert('출금계좌와 입금계좌가 같습니다.');
+
+                    let fromAcc = accounts.find(a => a.id === fromId);
+                    let toAcc = accounts.find(a => a.id === toId);
+                    if (!fromAcc || !toAcc) return alert('계좌를 모두 선택해주세요.');
+                    if (fromAcc.balance < amount) return alert('출금 계좌의 잔고가 부족합니다.');
+
+                    fromAcc.balance -= amount;
+                    toAcc.balance += amount;
+
+                    transactionHistory.push({
+                        id: Date.now(),
+                        date: dateString,
+                        type: TX_TYPE.INTERNAL_TRANSFER,
+                        from: fromAcc.name,
+                        fromAccId: fromAcc.id,
+                        fromAccCategory: fromAcc.category,
+                        to: toAcc.name,
+                        toAccId: toAcc.id,
+                        toAccCategory: toAcc.category,
+                        amount: amount
+                    });
+                }
+
+                currentHistoryPage = 1; // [추가] 신규 거래 시 1페이지 리셋
+                saveData();
+                transferForm.reset();
+                initDateInputs(); // 날짜 초기화
+                toggleTransferFields();
+                renderAll();
+            });
+        }
+
+        // =========================================================================
+        // [3-3] 내역 삭제 및 잔액 복구 (Reverse)
+        // =========================================================================
+        function removeHistory(id) {
+            if (!confirm('정말로 이 내역을 삭제하고 관련 자산(잔액 및 주식)을 복구하시겠습니까?')) return;
+            const hIdx = transactionHistory.findIndex(h => h.id === id);
+            if (hIdx === -1) return;
+
+            const item = transactionHistory[hIdx];
+
+            // 1. 자산 역산 (Reversal) 로직
+            reverseHistoryAssets(item);
+
+            // 2. 내역 삭제
+            transactionHistory.splice(hIdx, 1);
+            currentHistoryPage = 1; // [추가] 내역 삭제 시 1페이지 리셋 (데이터 꼬임 방지)
+            saveData();
+            renderAll();
+        }
+
+        // [신규] 히스토리 내역을 바탕으로 자산(현금+주식)을 역산하는 공통 헬퍼 (type 기반 + Global Error Handling)
+        function reverseHistoryAssets(item) {
+            try {
+                const txType = getHistoryType(item);
+
+                // A. 현금 잔고 복구 (type 무관하게 공통 적용)
+                // 보낸 쪽(출금처) 복구: balance 증가
+                if (item.fromAccId) {
+                    let acc = getOrCreateAccount(item.fromAccId, item.from, item.fromAccCategory);
+                    if (acc) acc.balance += item.amount;
+                }
+                // 받는 쪽(입금처) 복구: balance 감소
+                if (item.toAccId) {
+                    let acc = getOrCreateAccount(item.toAccId, item.to, item.toAccCategory);
+                    if (acc) acc.balance -= item.amount;
+                }
+
+                // B. 주식 자산 복구 (type 기반 분기)
+                switch (txType) {
+                    case TX_TYPE.STOCK_BUY:
+                        if (item.stockName) {
+                            let stock = stocks.find(s => s.name === item.stockName);
+                            if (stock) {
+                                stock.quantity -= (item.quantity || 0);
+                                stock.investAmount -= (item.amount || 0);
+                                if (stock.quantity <= 0) {
+                                    stocks = stocks.filter(s => s.id !== stock.id);
+                                } else {
+                                    stock.evaluationAmount = stock.quantity * stock.currentPrice;
+                                    stock.profitLoss = stock.evaluationAmount - stock.investAmount;
+                                }
+                            }
+                        }
+                        break;
+                    case TX_TYPE.STOCK_SELL:
+                        if (item.stockName) {
+                            let stock = stocks.find(s => s.name === item.stockName);
+                            if (stock) {
+                                stock.quantity += (item.sellQty || 0);
+                                stock.investAmount += (item.costReduction || 0);
+                                stock.evaluationAmount = stock.quantity * stock.currentPrice;
+                                stock.profitLoss = stock.evaluationAmount - stock.investAmount;
+                            } else {
+                                const recoveredQty = item.sellQty || 0;
+                                const recoveredInvest = item.costReduction || 0;
+                                const recoveredBuyPrice = recoveredQty > 0 ? Math.round(recoveredInvest / recoveredQty) : 0;
+                                stocks.push({
+                                    id: Date.now(),
+                                    name: item.stockName,
+                                    investAmount: recoveredInvest,
+                                    buyPrice: recoveredBuyPrice,
+                                    currentPrice: recoveredBuyPrice,
+                                    quantity: recoveredQty,
+                                    evaluationAmount: recoveredInvest,
+                                    profitLoss: 0,
+                                    accountName: item.to,
+                                    accountCategory: item.toAccCategory
+                    });
+                            }
+                        }
+                        break;
+                    default:
+                        // EXTERNAL_IN, EXTERNAL_OUT, INTERNAL_TRANSFER: 현금 복구만 (위에서 처리 완료)
+                        break;
+                }
+            } catch (err) {
+                console.error('[reverseHistoryAssets] 롤백 중 오류 발생:', err, item);
+            }
+        }
+
+        // =========================================================================
+        // [3-4] 내역 수정 (수정 시 기존 내역은 자동 취소 및 폼 복구)
+        // =========================================================================
+        function editHistory(id) {
+            if (!confirm('이 내역을 수정하시겠습니까?\n기존 거래가 자동 취소(잔고 및 주식 복구)되며, 내용을 수정하여 다시 입력할 수 있도록 폼을 채워드립니다.')) return;
+
+            const hIdx = transactionHistory.findIndex(h => h.id === id);
+            if (hIdx === -1) return;
+            const item = transactionHistory[hIdx];
+
+            // 1. 자산 역산 (reversal logic)
+            reverseHistoryAssets(item);
+
+            // 2. 폼 복구 (Mapping data back to forms)
+            try {
+                const txType = getHistoryType(item);
+
+                if (txType === TX_TYPE.EXTERNAL_IN && item.from && (item.from.includes('추가입금') || item.from.includes('초기입금'))) {
+                    // 계좌 관리 폼
+                    document.getElementById('acc-name').value = item.to;
+                    const acc = getOrCreateAccount(item.toAccId, item.to, item.toAccCategory);
+                    document.getElementById('acc-category').value = acc.category;
+                    document.getElementById('acc-balance').value = formatNumberWithCommas(item.amount);
+                    document.getElementById('acc-date').value = item.date;
+                    switchMainTab('overview');
+                    window.scrollTo({ top: 100, behavior: 'smooth' });
+                } else if (txType === TX_TYPE.STOCK_BUY) {
+                    // 주식 매수
+                    const stockName = item.stockName || item.to.replace('주식 매수 (', '').replace(')', '');
+                    document.getElementById('stock-name').value = stockName;
+                    document.getElementById('payment-account').value = item.fromAccId || "";
+                    document.getElementById('stock-date').value = item.date;
+                    // 금액 및 소요 데이터 복구
+                    document.getElementById('quantity').value = formatNumberWithCommas(item.quantity || 0);
+                    document.getElementById('invest-amount').value = formatNumberWithCommas(item.amount || 0);
+                    document.getElementById('commission').value = formatNumberWithCommas(item.commission || 0);
+
+                    switchMainTab('overview');
+                    window.scrollTo({ top: 100, behavior: 'smooth' });
+                } else if (txType === TX_TYPE.STOCK_SELL) {
+                    // 주식 매도
+                    alert('매도 내역이 취소되어 해당 주식이 다시 자산으로 복구되었습니다.\n수정이 필요하시면 주식 목록에서 다시 매도를 진행해 주세요.');
+                    switchMainTab('detail');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    // 일반 이체/입출금
+                    const typeSelect = document.getElementById('transfer-type');
+                    if (txType === TX_TYPE.EXTERNAL_IN) {
+                        typeSelect.value = 'deposit';
+                        document.getElementById('transfer-to').value = item.toAccId;
+                    } else if (txType === TX_TYPE.EXTERNAL_OUT) {
+                        typeSelect.value = 'withdraw';
+                        document.getElementById('transfer-from').value = item.fromAccId;
+                    } else if (txType === TX_TYPE.INTERNAL_TRANSFER) {
+                        typeSelect.value = 'transfer';
+                        document.getElementById('transfer-from').value = item.fromAccId;
+                        document.getElementById('transfer-to').value = item.toAccId;
+                    }
+                    toggleTransferFields();
+                    document.getElementById('transfer-amount').value = formatNumberWithCommas(item.amount);
+                    document.getElementById('transfer-date').value = item.date;
+                    switchMainTab('overview');
+                    window.scrollTo({ top: 100, behavior: 'smooth' });
+                }
+
+                // 3. 내역 삭제 및 저장
+                transactionHistory.splice(hIdx, 1);
+                saveData();
+                renderAll();
+                if (txType !== TX_TYPE.STOCK_SELL) {
+                    alert('기존 내역이 취소(자산 복구)되었습니다. 폼에 복구된 내용을 수정하여 다시 입력해 주세요.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('내역 복구 중 오류가 발생했습니다.');
+            }
+        }
+        // [3-3] 종목코드 추출 헬퍼 (v3.5 - 영숫자 혼합 및 우선순위 대응)
+        function extractTicker(text) {
+            if (!text) return null;
+            const bracketMatch = text.match(/\(([A-Za-z0-9]{6})\)/);
+            if (bracketMatch) return bracketMatch[1];
+            const anyMatch = text.match(/(?=.*\d)[A-Za-z0-9]{6}/);
+            return anyMatch ? anyMatch[0] : null;
+        }
+
+        document.getElementById('stock-name').addEventListener('blur', function () {
+            const nameValue = this.value;
+            const tickerInput = document.getElementById('stock-ticker');
+            const code = extractTicker(nameValue);
+            if (code && (!tickerInput.value || tickerInput.value.length < 6)) {
+                tickerInput.value = code;
+            }
+        });
+
+        // [3-3-A] v3.1용 다중 프록시 HTML 수집 헬퍼
+        async function fetchHtmlWithFallback(targetUrl) {
+            const proxies = [
+                `https://api.allorigins.win/get?url=`,
+                `https://corsproxy.io/?url=`,
+                `https://api.codetabs.com/v1/proxy?quest=`
+            ];
+            for (let proxy of proxies) {
+                try {
+                    const proxyUrl = proxy + encodeURIComponent(targetUrl);
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) continue;
+
+                    if (proxy.includes('allorigins')) {
+                        const data = await response.json();
+                        if (data.contents) return data.contents;
+                    } else {
+                        return await response.text();
+                    }
+                } catch (e) {
+                    console.warn(`Proxy ${proxy} failed, trying next...`);
+                }
+            }
+            throw new Error("모든 프록시 서버가 응답하지 않습니다.");
+        }
+
+        // [3-4] 네이버 금융 기반 시세 동기화 (v3.4 - 병렬 처리 적용)
+        async function syncAllPrices() {
+            if (stocks.length === 0) return alert('동기화할 주식이 없습니다.');
+            const btn = document.getElementById('sync-prices-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "🔄 동기화 중...";
+            btn.disabled = true;
+
+            const syncPromises = stocks.map(async (stock) => {
+                try {
+                    let code = stock.ticker;
+                    if (!code || !/^[A-Za-z0-9]{6}$/.test(code.trim())) {
+                        const extracted = extractTicker(stock.name);
+                        if (extracted) {
+                            code = extracted;
+                            stock.ticker = code;
+                        }
+                    }
+
+                    if (!code || !/^[A-Za-z0-9]{6}$/.test(code.trim())) {
+                        throw new Error("6자리 코드 없음");
+                    }
+
+                    const naverUrl = `https://finance.naver.com/item/main.naver?code=${code.trim()}`;
+                    const html = await fetchHtmlWithFallback(naverUrl);
+
+                    if (!html) throw new Error("데이터 수신 실패");
+
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const priceEl = doc.querySelector('.no_today .blind');
+
+                    if (!priceEl) throw new Error("가격 파싱 실패");
+
+                    const priceText = priceEl.textContent.trim().replace(/,/g, '');
+                    const newPrice = parseInt(priceText);
+                    if (isNaN(newPrice) || newPrice <= 0) throw new Error("유효하지 않은 가격");
+
+                    stock.currentPrice = newPrice;
+                    stock.evaluationAmount = stock.currentPrice * stock.quantity;
+                    stock.profitLoss = stock.evaluationAmount - stock.investAmount;
+                    return stock.name;
+                } catch (e) {
+                    const errorMsg = e.message || "오류 발생";
+                    throw { name: stock.name, reason: errorMsg };
+                }
+            });
+
+            const results = await Promise.allSettled(syncPromises);
+
+            let successItems = [];
+            let failItems = [];
+
+            results.forEach(result => {
+                if (result.status === 'fulfilled') {
+                    successItems.push(result.value);
+                } else {
+                    const err = result.reason;
+                    failItems.push(`${err.name}(${err.reason})`);
+                }
+            });
+
+            saveData();
+            renderAll();
+            btn.innerText = originalText;
+            btn.disabled = false;
+
+            let msg = `동기화 완료: ${successItems.length}개 / 실패: ${failItems.length}개`;
+            if (failItems.length > 0) {
+                msg += `\n(실패 종목: ${failItems.join(', ')})`;
+            }
+            alert(msg);
+        }
+
+        // [3-4-A] 개별 종목 시세 동기화 (v3.1 - 네이버 금융)
+        async function updateStockPrice(id) {
+            const stock = stocks.find(s => s.id === id);
+            if (!stock) return;
+
+            let code = stock.ticker;
+            if (!code || !/^[A-Za-z0-9]{6}$/.test(code.trim())) {
+                const extracted = extractTicker(stock.name);
+                if (extracted) {
+                    code = extracted;
+                    stock.ticker = code;
+                } else {
+                    const manual = prompt(`[${stock.name}]의 6자리 종목코드를 입력해 주세요. (영문/숫자 혼합 가능)`, "");
+                    if (manual && /^[A-Za-z0-9]{6}$/.test(manual.trim())) {
+                        code = manual.trim();
+                        stock.ticker = code;
+                    } else return;
+                }
+            }
+
+            try {
+                const naverUrl = `https://finance.naver.com/item/main.naver?code=${code.trim()}`;
+                const html = await fetchHtmlWithFallback(naverUrl);
+
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const priceEl = doc.querySelector('.no_today .blind');
+
+                if (priceEl) {
+                    const priceText = priceEl.textContent.trim().replace(/,/g, '');
+                    const newPrice = parseInt(priceText);
+                    if (!isNaN(newPrice) && newPrice > 0) {
+                        stock.currentPrice = newPrice;
+                        stock.evaluationAmount = stock.currentPrice * stock.quantity;
+                        stock.profitLoss = stock.evaluationAmount - stock.investAmount;
+                        saveData();
+                        renderAll();
+                        alert(`[${stock.name}] 시세가 갱신되었습니다.`);
+                        return;
+                    }
+                }
+                alert('시세 정보를 가져오지 못했습니다.');
+            } catch (e) {
+                alert('동기화 중 오류가 발생했습니다.');
+            }
+        }
+
+        // [3-4-B] 종목코드 수동 수정 (v3.1)
+        function editStockTicker(id) {
+            const stock = stocks.find(s => s.id === id);
+            if (!stock) return;
+            const newCode = prompt(`[${stock.name}]의 종목코드(6자리 영숫자)를 입력해 주세요.`, stock.ticker || "");
+            if (newCode !== null) {
+                const trimmed = newCode.trim();
+                if (/^[A-Za-z0-9]{6}$/.test(trimmed)) {
+                    stock.ticker = trimmed;
+                    saveData();
+                    renderAll();
+                } else {
+                    alert('올바른 6자리 영숫자를 입력해 주세요.');
+                }
+            }
+        }
+
+        // [3-5] 주식 내역 수정 (수정 시 기존 매수는 자동 취소 및 폼 복구)
+        function editStock(id) {
+            if (!confirm('이 주식 매수 내역을 수정하시겠습니까?\n기존 매수가 자동 취소(잔액 복구)되며, 내용을 수정하여 다시 입력할 수 있도록 폼을 채워드립니다.')) return;
+
+            const sIdx = stocks.findIndex(s => s.id === id);
+            if (sIdx === -1) return;
+            const stock = stocks[sIdx];
+
+            // 1. 잔액 복구 (reversal logic)
+            // 결제되었던 계좌 이름을 기준으로 계좌 찾기 (없으면 복구 생성)
+            let acc = getOrCreateAccount(null, stock.accountName, stock.accountCategory);
+            acc.balance += stock.investAmount;
+
+            // 2. 폼 복구
+            document.getElementById('stock-name').value = stock.name;
+            document.getElementById('stock-ticker').value = stock.ticker || "";
+            document.getElementById('quantity').value = formatNumberWithCommas(stock.quantity);
+            document.getElementById('buy-price').value = formatNumberWithCommas(stock.buyPrice || (stock.investAmount / stock.quantity));
+            document.getElementById('current-price').value = formatNumberWithCommas(stock.currentPrice);
+            document.getElementById('commission').value = formatNumberWithCommas(stock.commission || 0);
+
+            // 결제 계좌 선택 복구
+            if (acc) {
+                paymentAccSelect.value = acc.id;
+            }
+
+            // 3. 주식 데이터 삭제
+            stocks.splice(sIdx, 1);
+
+            // 관련 히스토리도 삭제 (최근 내역 중 해당 종목 매수 건 찾기)
+            const hIdx = transactionHistory.findIndex(h => getHistoryType(h) === TX_TYPE.STOCK_BUY && (h.stockName === stock.name || h.to.includes(`(${stock.name})`)) && h.amount === stock.investAmount);
+            if (hIdx !== -1) {
+                transactionHistory.splice(hIdx, 1);
+            }
+
+            saveData();
+            updateAutoInvestment();
+            renderAll();
+            switchMainTab('overview');
+            window.scrollTo({ top: 100, behavior: 'smooth' });
+            alert('기존 매수 내역이 취소(삭제)되었습니다. 폼에 복구된 내용을 수정하여 다시 입력해 주세요.');
+        }
+
+
+        // [3-7] 계좌 복구 및 반환 헬퍼 (수정 시 삭제된 계좌 대응)
+        function getOrCreateAccount(id, name, category) {
+            let acc = accounts.find(a => a.id === id);
+            if (!acc) {
+                // 이름과 카테고리로 다시 찾기 (ID가 바뀌었을 가능성 대비)
+                acc = accounts.find(a => a.name === name && a.category === category);
+            }
+            if (!acc) {
+                // 그래도 없으면 새로 생성 (0원이라 삭제된 경우 복구)
+                acc = { id: id || Date.now(), name: name, category: category || '일반', balance: 0 };
+                accounts.push(acc);
+                console.log(`[계좌 복구] ${name} 계좌가 새로 생성되었습니다.`);
+            }
+            return acc;
+        }
+
+        // [3-8] 주식 부분 매도 모달 제어
+        function openSellModal(id) {
+            const stock = stocks.find(s => s.id === id);
+            if (!stock) return;
+
+            document.getElementById('modal-stock-id').value = id;
+            document.getElementById('modal-stock-name').value = stock.name;
+            document.getElementById('modal-max-qty').value = formatNumberWithCommas(stock.quantity);
+
+            // 자동 채우기: 현재 시세와 전액 수량
+            document.getElementById('modal-sell-qty').value = formatNumberWithCommas(stock.quantity);
+            document.getElementById('modal-sell-price').value = formatNumberWithCommas(stock.currentPrice);
+            document.getElementById('modal-sell-commission').value = "0";
+
+            // [추가] 매도 날짜 초기값: 오늘
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('modal-sell-date').value = today;
+
+            document.getElementById('sell-modal').style.display = 'flex';
+        }
+
+        function closeSellModal() {
+            document.getElementById('sell-modal').style.display = 'none';
+        }
+
+        function executeSell() {
+            const id = Number(document.getElementById('modal-stock-id').value);
+            const sellQty = unformatNumber(document.getElementById('modal-sell-qty').value);
+            const sellPrice = unformatNumber(document.getElementById('modal-sell-price').value);
+            const commission = unformatNumber(document.getElementById('modal-sell-commission').value);
+
+            const stock = stocks.find(s => s.id === id);
+            if (!stock) return;
+
+            if (sellQty <= 0 || sellQty > stock.quantity) {
+                return alert('매도 수량이 올바르지 않습니다. (보유 수량 이하로 입력)');
+            }
+            if (sellPrice <= 0) return alert('매도 단가를 입력해 주세요.');
+
+            const totalProceeds = (sellQty * sellPrice) - commission;
+
+            // 1. 현금 잔고 입금 (복구 헬퍼 사용)
+            const acc = getOrCreateAccount(null, stock.accountName, stock.accountCategory);
+            acc.balance += totalProceeds;
+
+            // [추가] 실현 손익 및 필요 데이터 계산
+            const avgBuyPrice = stock.investAmount / stock.quantity;
+            const realizedProfit = ((sellPrice - avgBuyPrice) * sellQty) - commission;
+
+            const sellRatio = sellQty / stock.quantity;
+            const costReduction = stock.investAmount * sellRatio;
+
+            // [수정] 모달에서 입력받은 날짜 사용
+            const dateString = document.getElementById('modal-sell-date').value || new Date().toISOString().split('T')[0];
+
+            // 히스토리 추가 (realizedProfit 필드 및 메타데이터 포함)
+            transactionHistory.push({
+                id: Date.now(),
+                date: dateString,
+                type: TX_TYPE.STOCK_SELL,
+                from: `주식 부분 매도 (${stock.name} - ${sellQty.toLocaleString()}주)`,
+                to: acc.name,
+                toAccId: acc.id,
+                toAccCategory: acc.category,
+                amount: totalProceeds,
+                realizedProfit: Math.round(realizedProfit),
+                isStockSell: true,
+                stockName: stock.name,
+                sellQty: sellQty,
+                costReduction: costReduction
+            });
+
+            if (sellQty === stock.quantity) {
+                // 전액 매도: 삭제
+                stocks = stocks.filter(s => s.id !== id);
+            } else {
+                // 부분 매도: 수량 및 투자원금 차감
+                stock.quantity -= sellQty;
+                stock.investAmount -= costReduction;
+                // 평가액 및 손익 재계산
+                stock.evaluationAmount = stock.quantity * stock.currentPrice;
+                stock.profitLoss = stock.evaluationAmount - stock.investAmount;
+            }
+
+            currentHistoryPage = 1; // [추가] 신규 거래 시 1페이지로 리셋
+            saveData();
+            renderAll();
+            closeSellModal();
+            alert(`매도가 완료되었습니다.\n입금액: ${totalProceeds.toLocaleString()}원`);
+        }
+
+        // 헬퍼 삭제 함수
+        function removeAccount(id) {
+            if (!confirm('정말로 이 계좌를 삭제하시겠습니까? 관련 데이터가 모두 사라집니다.')) return;
+            accounts = accounts.filter(a => a.id !== id);
+            saveData(); renderAll();
+        }
+
+        function removeStock(id) {
+            if (!confirm('정말로 이 주식을 매도/삭제하시겠습니까? 평가 금액이 해당 계좌로 환원됩니다.')) return;
+            let targetStock = stocks.find(s => s.id === id);
+            if (targetStock) {
+                let targetAccount = accounts.find(a => a.name === targetStock.accountName && a.category === targetStock.accountCategory);
+                if (targetAccount) {
+                    targetAccount.balance += targetStock.evaluationAmount;
+
+                    let today = new Date();
+                    let dateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+                    // [추가] 실현 손익 계산: 현재 손익금(profitLoss)과 동일
+                    const realizedProfit = targetStock.evaluationAmount - targetStock.investAmount;
+
+                    transactionHistory.push({
+                        id: Date.now(),
+                        date: dateString,
+                        type: TX_TYPE.STOCK_SELL,
+                        from: `주식 매도 (${targetStock.name})`,
+                        to: targetAccount.name,
+                        toAccId: targetAccount.id,
+                        toAccCategory: targetAccount.category,
+                        amount: targetStock.evaluationAmount,
+                        realizedProfit: Math.round(realizedProfit),
+                        isStockSell: true,
+                        stockName: targetStock.name,
+                        sellQty: targetStock.quantity,
+                        costReduction: targetStock.investAmount
+                    });
+                }
+            }
+
+            stocks = stocks.filter(s => s.id !== id);
+            saveData();
+            renderAll();
+        }
+
+        // =========================================================================
+        // [4] 전체 UI 제어 컨트롤러
+        // =========================================================================
+        function renderAll() {
+            renderPaymentDropdown();
+            renderSummary();
+            renderTables();
+            renderCharts();
+            updateStockDatalist();
+            updateAccountDatalist();
+            updateTabBadges();
+            mirrorDetailTables();
+        }
+
+        // [4-0] 메인 탭 전환 로직 (최상위)
+        function switchMainTab(tabName) {
+            // 모든 메인 탭 버튼 비활성화
+            document.querySelectorAll('.main-tab-btn').forEach(btn => btn.classList.remove('active'));
+            // 모든 메인 탭 콘텐츠 숨김
+            document.querySelectorAll('.main-tab-content-wrapper').forEach(content => content.classList.remove('active'));
+
+            // 선택된 메인 탭 활성화
+            document.getElementById(`main-tab-btn-${tabName}`).classList.add('active');
+            document.getElementById(`main-tab-${tabName}`).classList.add('active');
+
+            // Chart.js 리사이즈: 메인 탭 1 활성화 시 차트 캔버스 크기 보정
+            if (tabName === 'overview') {
+                setTimeout(() => {
+                    if (doughnutChart) doughnutChart.resize();
+                    if (catChart) catChart.resize();
+                    if (cashflowChart) cashflowChart.resize();
+                    if (timeSeriesChart) timeSeriesChart.resize();
+                }, 50);
+            }
+
+            // 메인 탭 전환 시 페이지 상단으로 부드럽게 스크롤
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // [4-0-A] 서브탭 전환 로직 (메인탭 2 내부)
+        function switchTab(tabName) {
+            // 모든 서브탭 버튼 비활성화
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            // 모든 서브탭 콘텐츠 숨김
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            // 선택된 서브탭 활성화
+            document.getElementById(`tab-btn-${tabName}`).classList.add('active');
+            document.getElementById(`tab-content-${tabName}`).classList.add('active');
+
+            // 탭 변경 시 탭 네비게이션 영역이 화면 상단에 보이도록 스크롤
+            const tabNav = document.querySelector('#main-tab-detail .tab-navigation');
+            if (tabNav) tabNav.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // [4-0-B] 탭 뱃지(건수) 업데이트
+        function updateTabBadges() {
+            const stockBadge = document.getElementById('tab-badge-stock');
+            const historyBadge = document.getElementById('tab-badge-history');
+            const tradeBadge = document.getElementById('tab-badge-trade');
+
+            const cashHistory = transactionHistory.filter(h => {
+                const txType = getHistoryType(h);
+                return txType === TX_TYPE.EXTERNAL_IN || txType === TX_TYPE.EXTERNAL_OUT || txType === TX_TYPE.INTERNAL_TRANSFER;
+            });
+            const tradeHistory = transactionHistory.filter(h => {
+                const txType = getHistoryType(h);
+                return txType === TX_TYPE.STOCK_BUY || txType === TX_TYPE.STOCK_SELL;
+            });
+
+            if (stockBadge) stockBadge.textContent = stocks.length;
+            if (historyBadge) historyBadge.textContent = cashHistory.length;
+            if (tradeBadge) tradeBadge.textContent = tradeHistory.length;
+        }
+
+        // [4-0-C] 메인탭 2 상세 테이블 미러링 (메인탭1의 원본 tbody 내용을 메인탭2의 미러 tbody에 복사)
+        function mirrorDetailTables() {
+            // 주식 테이블 미러링
+            const stockOriginal = document.getElementById('stock-table-body');
+            const stockMirror = document.getElementById('stock-table-body-detail');
+            if (stockOriginal && stockMirror) {
+                stockMirror.innerHTML = stockOriginal.innerHTML;
+            }
+
+            // 주식 페이지네이션 미러링
+            const stockPaginationOriginal = document.getElementById('stock-pagination');
+            const stockPaginationMirror = document.getElementById('stock-pagination-detail');
+            if (stockPaginationOriginal && stockPaginationMirror) {
+                stockPaginationMirror.innerHTML = stockPaginationOriginal.innerHTML;
+            }
+
+            // 히스토리 테이블 미러링
+            const historyOriginal = document.getElementById('history-table-body');
+            const historyMirror = document.getElementById('history-table-body-detail');
+            if (historyOriginal && historyMirror) {
+                historyMirror.innerHTML = historyOriginal.innerHTML;
+            }
+
+            // 히스토리 페이지네이션 미러링
+            const paginationOriginal = document.getElementById('history-pagination');
+            const paginationMirror = document.getElementById('history-pagination-detail');
+            if (paginationOriginal && paginationMirror) {
+                paginationMirror.innerHTML = paginationOriginal.innerHTML;
+            }
+
+            // 주식 거래 내역 미러링
+            const tradeOriginal = document.getElementById('trade-table-body');
+            const tradeMirror = document.getElementById('trade-table-body-detail');
+            if (tradeOriginal && tradeMirror) {
+                tradeMirror.innerHTML = tradeOriginal.innerHTML;
+            }
+
+            // 주식 거래 페이지네이션 미러링
+            const tradePaginationOriginal = document.getElementById('trade-pagination');
+            const tradePaginationMirror = document.getElementById('trade-pagination-detail');
+            if (tradePaginationOriginal && tradePaginationMirror) {
+                tradePaginationMirror.innerHTML = tradePaginationOriginal.innerHTML;
+            }
+        }
+
+        // [드롭다운] 주식 종목명 자동완성 리스트 업데이트
+        function updateStockDatalist() {
+            const datalist = document.getElementById('stock-list');
+            if (!datalist) return;
+            const uniqueNames = [...new Set(stocks.map(s => s.name))];
+            datalist.innerHTML = uniqueNames.map(name => `<option value="${name}">`).join('');
+        }
+
+        // [드롭다운] 계좌 이름 자동완성 리스트 업데이트 (사용자 요청)
+        function updateAccountDatalist() {
+            const datalist = document.getElementById('account-names-list');
+            if (!datalist) return;
+
+            // 1. 현재 존재하는 계좌 이름
+            const currentNames = accounts.map(a => a.name);
+
+            // 2. 거래 내역에 존재하는 계좌 이름 (삭제된 계좌 포함 목적)
+            const historyNames = [];
+            transactionHistory.forEach(h => {
+                if (h.toAccId && h.to) historyNames.push(h.to);
+                if (h.fromAccId && h.from) historyNames.push(h.from);
+            });
+
+            // 3. 중복 제거 및 정렬
+            const allNames = [...new Set([...currentNames, ...historyNames])].filter(n => n && n.trim() !== "");
+            allNames.sort();
+
+            datalist.innerHTML = allNames.map(name => `<option value="${name}">`).join('');
+        }
+
+        // [드롭다운] 계좌별 옵션 동적 렌더 (카테고리 직관적 표시 및 이체 폼)
+        function renderPaymentDropdown() {
+            paymentAccSelect.innerHTML = '<option value="" disabled selected>결제할 계좌 선택 (잔고 확인)</option>';
+            const tfFrom = document.getElementById('transfer-from');
+            const tfTo = document.getElementById('transfer-to');
+
+            if (tfFrom) tfFrom.innerHTML = '<option value="" disabled selected>출금 계좌 선택</option>';
+            if (tfTo) tfTo.innerHTML = '<option value="" disabled selected>입금 계좌 선택</option>';
+
+            if (accounts.length === 0) return;
+
+            accounts.forEach(acc => {
+                if (!acc || acc.isActive === false) return; // 이중 방어 코드
+                let optText = `[${acc.category}] ${acc.name} - 잔고: ${acc.balance.toLocaleString()}원`;
+
+                let opt1 = document.createElement('option');
+                opt1.value = acc.id;
+                opt1.textContent = optText;
+                paymentAccSelect.appendChild(opt1);
+
+                if (tfFrom) {
+                    let opt2 = document.createElement('option');
+                    opt2.value = acc.id;
+                    opt2.textContent = optText;
+                    tfFrom.appendChild(opt2);
+                }
+
+                if (tfTo) {
+                    let opt3 = document.createElement('option');
+                    opt3.value = acc.id;
+                    opt3.textContent = optText;
+                    tfTo.appendChild(opt3);
+                }
+            });
+        }
+
+        // [요약 집계] 9종 합산 계산 (현금흐름 기반 + 실현/미실현 손익 분리)
+        function renderSummary() {
+            let bankCash = 0, investCash = 0, totalStockInvest = 0, totalStockEval = 0;
+
+            accounts.forEach(a => {
+                if (a.category === '은행 예적금') {
+                    bankCash += a.balance;
+                } else {
+                    investCash += a.balance;
+                }
+            });
+
+            stocks.forEach(s => {
+                totalStockInvest += s.investAmount;
+                totalStockEval += s.evaluationAmount;
+            });
+
+            let totalCash = bankCash + investCash;
+            let totalAsset = totalCash + totalStockEval;
+
+            // [추가] 전체 포트폴리오 순입금 총액 계산
+            const netMap = calcNetDeposits();
+            let totalNetDeposit = 0;
+            for (let accId in netMap) {
+                totalNetDeposit += netMap[accId];
+            }
+
+            // [신규] 미실현 손익: 보유 중 주식의 profitLoss 총합
+            let unrealizedPnL = 0;
+            stocks.forEach(s => { unrealizedPnL += (s.profitLoss || 0); });
+
+            // [신규] 실현 손익: 매도 내역의 realizedProfit 총합 (type 기반)
+            let realizedPnL = 0;
+            transactionHistory.forEach(h => {
+                const txType = getHistoryType(h);
+                if (txType === TX_TYPE.STOCK_SELL && h.realizedProfit !== undefined && h.realizedProfit !== null) {
+                    realizedPnL += h.realizedProfit;
+                }
+            });
+
+            // 총 투자 손익 = 미실현 + 실현
+            let totalInvestPnL = unrealizedPnL + realizedPnL;
+
+            // [변경] 실제 순수익 = 전체 자산 총액 - 순입금 총액
+            let totalProfit = totalAsset - totalNetDeposit;
+            let totalProfitRate = totalNetDeposit > 0 ? ((totalProfit / totalNetDeposit) * 100) : 0;
+
+            document.getElementById('sum-bank-cash').textContent = fmt(bankCash);
+            document.getElementById('sum-invest-cash').textContent = fmt(investCash);
+            document.getElementById('sum-total-stock').textContent = fmt(totalStockEval);
+            document.getElementById('sum-total-asset').textContent = fmt(totalAsset);
+
+            // [추가] 순입금 총액 표시
+            document.getElementById('sum-net-deposit').textContent = fmt(totalNetDeposit);
+
+            // [신규] 미실현/실현 손익 표시
+            const unrealizedUI = document.getElementById('sum-unrealized-pnl');
+            unrealizedUI.textContent = `${sign(unrealizedPnL)}${fmt(unrealizedPnL)}`;
+            unrealizedUI.className = `sub-amount ${col(unrealizedPnL)}`;
+
+            const realizedUI = document.getElementById('sum-realized-pnl');
+            realizedUI.textContent = `${sign(realizedPnL)}${fmt(realizedPnL)}`;
+            realizedUI.className = `sub-amount ${col(realizedPnL)}`;
+
+            const profitUI = document.getElementById('sum-total-profit');
+            profitUI.textContent = `${sign(totalProfit)}${fmt(totalProfit)} (${sign(totalProfitRate)}${totalProfitRate.toFixed(2)}%)`;
+            profitUI.className = `sub-amount ${col(totalProfit)}`;
+        }
+
+        // [테이블 렌더링] 계좌와 주식 목록 (카테고리 UI/태그 색상 적용)
+        function renderTables() {
+            accTbody.innerHTML = '';
+            // 이중 방어 코드: 객체가 존재하고 isActive가 false가 아닌 경우만 렌더링
+            const visibleAccounts = accounts.filter(acc => acc && acc.isActive !== false && acc.balance > 0);
+            const netMap = calcNetDeposits(); // 순입금 계산
+
+            if (visibleAccounts.length === 0) {
+                accTbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:1.5rem;">잔고가 있는 관리 계좌가 없습니다.</td></tr>`;
+            } else {
+                // [변경] 잔고가 0보다 큰 계좌만 화면(표)에 표시 (단, 데이터는 유지됨)
+                visibleAccounts.forEach(acc => {
+                    // [추가] 해당 계좌로 매수한 종목들의 평가액 합산
+                    const accStocks = stocks.filter(s => s.accountName === acc.name && s.accountCategory === acc.category);
+                    const totalEval = accStocks.reduce((sum, s) => sum + s.evaluationAmount, 0);
+
+                    // 현재 총자산 = 현금 잔고 + 주식 평가액
+                    const currentTotalAsset = acc.balance + totalEval;
+                    // 누적 순입금(원금)
+                    const netDeposit = netMap[acc.id] || 0;
+                    // 실제 순수익금 = 현재 총자산 - 누적 순입금
+                    const netProfit = currentTotalAsset - netDeposit;
+                    // 순수익률 (분모 0 방지)
+                    const netProfitRate = netDeposit !== 0 ? ((netProfit / Math.abs(netDeposit)) * 100) : 0;
+
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${getCatTag(acc.category)}</td>
+                        <td class="font-bold">${acc.name}</td>
+                        <td class="text-right font-bold cash-text">${fmt(netDeposit)}</td>
+                        <td class="text-right font-bold">${fmt(currentTotalAsset)}</td>
+                        <td class="text-right font-bold ${col(netProfit)}">${sign(netProfit)}${fmt(netProfit)}</td>
+                        <td class="text-right font-bold ${col(netProfitRate)}">
+                            ${netDeposit !== 0 ? `${sign(netProfitRate)}${netProfitRate.toFixed(2)}%` : '<span style="color:var(--text-muted); font-weight:normal;">-</span>'}
+                        </td>
+                        <td class="text-center"><span style="color:var(--text-muted); font-size:0.8rem;">잔고 0원 시 숨김 처리</span></td>
+                    `;
+                    accTbody.appendChild(tr);
+                });
+            }
+
+            stockTbody.innerHTML = '';
+            if (stocks.length === 0) {
+                stockTbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted" style="padding:1.5rem;">보유 주식이 없습니다. 결제 계좌를 선택해 매수해 보세요.</td></tr>`;
+                renderStockPagination(0);
+            } else {
+                // 주식 정렬 (1순위: 결제된 계좌명, 2순위: 종목명)
+                const sortedStocks = [...stocks].sort((a, b) => {
+                    const accA = a.accountName || '';
+                    const accB = b.accountName || '';
+                    if (accA !== accB) return accA.localeCompare(accB);
+                    const nameA = a.name || '';
+                    const nameB = b.name || '';
+                    return nameA.localeCompare(nameB);
+                });
+
+                const totalPages = Math.ceil(sortedStocks.length / stockItemsPerPage);
+                if (currentStockPage > totalPages) currentStockPage = totalPages || 1;
+
+                const startIndex = (currentStockPage - 1) * stockItemsPerPage;
+                const pageItems = sortedStocks.slice(startIndex, startIndex + stockItemsPerPage);
+
+                pageItems.forEach(stock => {
+                    let yieldRate = stock.investAmount > 0 ? (stock.profitLoss / stock.investAmount) * 100 : 0;
+                    // 결제된 계좌+카테고리 정보가 있다면 카드처럼 묶어서 디자인 표시
+                    let originInfo = stock.accountCategory ?
+                        `<div>${getCatTag(stock.accountCategory)}</div><div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${stock.accountName} 결제됨</div>` :
+                        `<span style="color:var(--text-muted); font-size:0.8rem;">미지정</span>`;
+
+                    let tr = document.createElement('tr');
+                    tr.className = 'history-row';
+                    tr.innerHTML = `
+                        <td>${originInfo}</td>
+                        <td class="font-bold">
+                            ${stock.name}
+                            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:normal; margin-top:2px;">
+                                코드: ${stock.ticker ? stock.ticker : '<strong>없음</strong>'}
+                            </div>
+                        </td>
+                        <td class="text-right">${fmt(stock.currentPrice)}</td>
+                        <td class="text-right">${stock.quantity.toLocaleString()}</td>
+                        <td class="text-right">${fmt(stock.investAmount)}</td>
+                        <td class="text-right font-bold">${fmt(stock.evaluationAmount)}</td>
+                        <td class="text-right font-bold ${col(stock.profitLoss)}">${sign(stock.profitLoss)}${fmt(stock.profitLoss)}</td>
+                        <td class="text-right font-bold ${col(yieldRate)}">${sign(yieldRate)}${yieldRate.toFixed(2)}%</td>
+                        <td class="text-center" style="white-space: nowrap;">
+                            <button onclick="updateStockPrice(${stock.id})" class="delete-btn" style="border-color:var(--accent); color:var(--accent); margin-right:4px;">시세</button>
+                            <button onclick="editStockTicker(${stock.id})" class="delete-btn" style="border-color:var(--cash); color:var(--cash); margin-right:4px;">코드</button>
+                            <button onclick="editStock(${stock.id})" class="delete-btn" style="border-color:var(--accent); color:var(--accent); margin-right:4px;">수정</button>
+                            <button onclick="openSellModal(${stock.id})" class="delete-btn">매도</button>
+                        </td>
+                    `;
+                    stockTbody.appendChild(tr);
+                });
+
+                for (let i = pageItems.length; i < stockItemsPerPage; i++) {
+                    let emptyTr = document.createElement('tr');
+                    emptyTr.className = 'history-row';
+                    emptyTr.innerHTML = `<td colspan="9" style="border-bottom: 1px solid transparent;">&nbsp;</td>`;
+                    stockTbody.appendChild(emptyTr);
+                }
+                renderStockPagination(totalPages);
+            }
+
+            if (historyTbody) {
+                historyTbody.innerHTML = '';
+                const tradeTbody = document.getElementById('trade-table-body');
+                if (tradeTbody) tradeTbody.innerHTML = '';
+
+                // 분리 로직 적용
+                const cashHistory = transactionHistory.filter(h => {
+                    const txType = getHistoryType(h);
+                    return txType === TX_TYPE.EXTERNAL_IN || txType === TX_TYPE.EXTERNAL_OUT || txType === TX_TYPE.INTERNAL_TRANSFER;
+                });
+                const tradeHistory = transactionHistory.filter(h => {
+                    const txType = getHistoryType(h);
+                    return txType === TX_TYPE.STOCK_BUY || txType === TX_TYPE.STOCK_SELL;
+                });
+
+                // --- 1. 자금 이동 내역 렌더링 ---
+                if (cashHistory.length === 0) {
+                    historyTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted" style="padding:1.5rem;">자금 이동 내역이 없습니다.</td></tr>`;
+                    renderHistoryPagination(0);
+                } else {
+                    const sortedHistory = [...cashHistory].sort((a, b) => {
+                        if (b.date !== a.date) return b.date.localeCompare(a.date);
+                        return b.id - a.id;
+                    });
+
+                    const totalPages = Math.ceil(sortedHistory.length / historyItemsPerPage);
+                    if (currentHistoryPage > totalPages) currentHistoryPage = totalPages || 1;
+
+                    const startIndex = (currentHistoryPage - 1) * historyItemsPerPage;
+                    const pageItems = sortedHistory.slice(startIndex, startIndex + historyItemsPerPage);
+
+                    pageItems.forEach(history => {
+                        const txType = getHistoryType(history);
+                        let isOut = txType === TX_TYPE.EXTERNAL_OUT;
+                        let isNeutral = txType === TX_TYPE.INTERNAL_TRANSFER;
+                        let isIn = txType === TX_TYPE.EXTERNAL_IN;
+
+                        let signStr = isOut ? '-' : (isNeutral ? '' : '+');
+                        let cssClass = isOut ? 'loss-text' : (isNeutral ? '' : 'cash-text');
+
+                        let tr = document.createElement('tr');
+                        tr.className = 'history-row';
+                        tr.innerHTML = `
+                            <td>${history.date}</td>
+                            <td><span class="tag tag-default">${history.from}</span></td>
+                            <td class="font-bold">${history.to}</td>
+                            <td class="text-right font-bold ${cssClass}">${signStr}${fmt(history.amount)}</td>
+                            <td class="text-center">
+                                <button onclick="editHistory(${history.id})" class="delete-btn" style="border-color:var(--accent); color:var(--accent); margin-right:5px;">수정</button>
+                                <button onclick="removeHistory(${history.id})" class="delete-btn">삭제</button>
+                            </td>
+                        `;
+                        historyTbody.appendChild(tr);
+                    });
+
+                    for (let i = pageItems.length; i < historyItemsPerPage; i++) {
+                        let emptyTr = document.createElement('tr');
+                        emptyTr.className = 'history-row';
+                        emptyTr.innerHTML = `<td colspan="5" style="border-bottom: 1px solid transparent;">&nbsp;</td>`;
+                        historyTbody.appendChild(emptyTr);
+                    }
+                    renderHistoryPagination(totalPages);
+                }
+
+                // --- 2. 주식 거래 내역 렌더링 ---
+                if (tradeTbody) {
+                    if (tradeHistory.length === 0) {
+                        tradeTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted" style="padding:1.5rem;">주식 거래 내역이 없습니다.</td></tr>`;
+                        renderTradePagination(0);
+                    } else {
+                        const sortedTrade = [...tradeHistory].sort((a, b) => {
+                            if (b.date !== a.date) return b.date.localeCompare(a.date);
+                            return b.id - a.id;
+                        });
+
+                        const totalPages = Math.ceil(sortedTrade.length / historyItemsPerPage);
+                        if (currentTradePage > totalPages) currentTradePage = totalPages || 1;
+
+                        const startIndex = (currentTradePage - 1) * historyItemsPerPage;
+                        const pageItems = sortedTrade.slice(startIndex, startIndex + historyItemsPerPage);
+
+                        pageItems.forEach(history => {
+                            const txType = getHistoryType(history);
+                            let isOut = txType === TX_TYPE.STOCK_BUY;
+                            let isIn = txType === TX_TYPE.STOCK_SELL;
+
+                            let signStr = isOut ? '-' : '+';
+                            let cssClass = isOut ? 'loss-text' : 'cash-text';
+
+                            let extraInfo = '';
+                            let qtyPart = '';
+                            let profitPart = '';
+
+                            if (txType === TX_TYPE.STOCK_BUY && history.quantity) {
+                                qtyPart = `<span style="color: var(--text-muted);">(매수: ${history.quantity.toLocaleString()}주)</span>`;
+                            } else if (txType === TX_TYPE.STOCK_SELL && history.sellQty) {
+                                qtyPart = `<span style="color: var(--text-muted);">(매도: ${history.sellQty.toLocaleString()}주)</span>`;
+                            }
+
+                            if (history.realizedProfit !== undefined && history.realizedProfit !== null) {
+                                const pColor = history.realizedProfit > 0 ? 'var(--profit)' : (history.realizedProfit < 0 ? 'var(--loss)' : 'var(--text-muted)');
+                                const pSign = history.realizedProfit > 0 ? '+' : '';
+                                profitPart = `<span style="color: ${pColor}; font-weight: 700; margin-left: 6px;">[실현 손익: ${pSign}${history.realizedProfit.toLocaleString()}원]</span>`;
+                            }
+
+                            if (qtyPart || profitPart) {
+                                extraInfo = `<div style="font-size: 0.75rem; margin-top: 4px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+                                    ${qtyPart} ${profitPart}
+                                </div>`;
+                            }
+
+                            let tr = document.createElement('tr');
+                            tr.className = 'history-row';
+                            tr.innerHTML = `
+                                <td>${history.date}</td>
+                                <td><span class="tag tag-default">${history.from}</span></td>
+                                <td class="font-bold">${history.to}${extraInfo}</td>
+                                <td class="text-right font-bold ${cssClass}">${signStr}${fmt(history.amount)}</td>
+                                <td class="text-center">
+                                    <button onclick="editHistory(${history.id})" class="delete-btn" style="border-color:var(--accent); color:var(--accent); margin-right:5px;">수정</button>
+                                    <button onclick="removeHistory(${history.id})" class="delete-btn">삭제</button>
+                                </td>
+                            `;
+                            tradeTbody.appendChild(tr);
+                        });
+
+                        for (let i = pageItems.length; i < historyItemsPerPage; i++) {
+                            let emptyTr = document.createElement('tr');
+                            emptyTr.className = 'history-row';
+                            emptyTr.innerHTML = `<td colspan="5" style="border-bottom: 1px solid transparent;">&nbsp;</td>`;
+                            tradeTbody.appendChild(emptyTr);
+                        }
+                        renderTradePagination(totalPages);
+                    }
+                }
+            }
+        }
+
+        // 자금 이동 페이지네이션 렌더링
+        function renderHistoryPagination(totalPages) {
+            const paginationContainer = document.getElementById('history-pagination');
+            if (!paginationContainer) return;
+
+            if (totalPages <= 1) {
+                paginationContainer.innerHTML = '';
+                return;
+            }
+
+            paginationContainer.innerHTML = `
+                <button class="page-btn" onclick="changeHistoryPage(${currentHistoryPage - 1})" ${currentHistoryPage === 1 ? 'disabled' : ''}>
+                    <span>◀</span> 이전
+                </button>
+                <div class="page-info">${currentHistoryPage} / ${totalPages}</div>
+                <button class="page-btn" onclick="changeHistoryPage(${currentHistoryPage + 1})" ${currentHistoryPage === totalPages ? 'disabled' : ''}>
+                    다음 <span>▶</span>
+                </button>
+            `;
+        }
+
+        function changeHistoryPage(page) {
+            currentHistoryPage = page;
+            renderTables();
+            mirrorDetailTables();
+            // 탭 영역이 보이도록 상단 탭 네비게이션을 기준으로 스크롤 이동
+            const tabNav = document.querySelector('#main-tab-detail .tab-navigation');
+            if (tabNav) tabNav.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // 주식 거래 페이지네이션 렌더링
+        function renderTradePagination(totalPages) {
+            const paginationContainer = document.getElementById('trade-pagination');
+            if (!paginationContainer) return;
+
+            if (totalPages <= 1) {
+                paginationContainer.innerHTML = '';
+                return;
+            }
+
+            paginationContainer.innerHTML = `
+                <button class="page-btn" onclick="changeTradePage(${currentTradePage - 1})" ${currentTradePage === 1 ? 'disabled' : ''}>
+                    <span>◀</span> 이전
+                </button>
+                <div class="page-info">${currentTradePage} / ${totalPages}</div>
+                <button class="page-btn" onclick="changeTradePage(${currentTradePage + 1})" ${currentTradePage === totalPages ? 'disabled' : ''}>
+                    다음 <span>▶</span>
+                </button>
+            `;
+        }
+
+        function changeTradePage(page) {
+            currentTradePage = page;
+            renderTables();
+            mirrorDetailTables();
+            // 탭 영역이 보이도록 상단 탭 네비게이션을 기준으로 스크롤 이동
+            const tabNav = document.querySelector('#main-tab-detail .tab-navigation');
+            if (tabNav) tabNav.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // 주식 자산 상세 내역 페이지네이션 렌더링
+        function renderStockPagination(totalPages) {
+            const paginationContainer = document.getElementById('stock-pagination');
+            if (!paginationContainer) return;
+
+            if (totalPages <= 1) {
+                paginationContainer.innerHTML = '';
+                return;
+            }
+
+            paginationContainer.innerHTML = `
+                <button class="page-btn" onclick="changeStockPage(${currentStockPage - 1})" ${currentStockPage === 1 ? 'disabled' : ''}>
+                    <span>◀</span> 이전
+                </button>
+                <div class="page-info">${currentStockPage} / ${totalPages}</div>
+                <button class="page-btn" onclick="changeStockPage(${currentStockPage + 1})" ${currentStockPage === totalPages ? 'disabled' : ''}>
+                    다음 <span>▶</span>
+                </button>
+            `;
+        }
+
+        function changeStockPage(page) {
+            currentStockPage = page;
+            renderTables();
+            mirrorDetailTables();
+            // 탭 영역이 보이도록 상단 탭 네비게이션을 기준으로 스크롤 이동
+            const tabNav = document.querySelector('#main-tab-detail .tab-navigation');
+            if (tabNav) tabNav.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // =========================================================================
+        // [5] Chart.js : 차트 2개 일괄 동적 렌더링
+        // - 좌측: 개별 종목 평가액 중심의 기존 차트
+        // - 우측: 새롭게 추가된 '카테고리 (계좌성격)' 중심 자산 분석 차트
+        // =========================================================================
+        function renderCharts() {
+            // [A] 차트 1: 개별 종목 + 총 현금 통합 지표 구성 연산
+            let totalCash = 0;
+            accounts.forEach(a => totalCash += a.balance);
+
+            let pfLabels = [];
+            let pfData = [];
+
+            if (totalCash > 0) { pfLabels.push('보유 현금'); pfData.push(totalCash); }
+            stocks.forEach(s => {
+                if (s.evaluationAmount > 0) {
+                    pfLabels.push(s.name);
+                    pfData.push(s.evaluationAmount);
+                }
+            });
+
+            // [B] 차트 2: 카테고리 구성 연산 해시테이블
+            // 어떤 성격의 목적성 자산(연금, 일반주식 등)을 많이 들고 있는지 총합!
+            let catTotals = { '일반 주식 계좌': 0, '연금저축계좌': 0, 'ISA 계좌': 0, '퇴직금 DC 계좌': 0, '은행 예적금': 0, '기타': 0 };
+
+            // 현금 잔고 덧셈
+            accounts.forEach(a => {
+                let cat = a.category || '기타';
+                catTotals[cat] = (catTotals[cat] || 0) + a.balance;
+            });
+            // 이미 결제되어 주식으로 바뀐 자산들의 평가액 덧셈
+            stocks.forEach(s => {
+                let cat = s.accountCategory || '기타';
+                catTotals[cat] = (catTotals[cat] || 0) + Math.max(0, s.evaluationAmount);
+            });
+
+            let catLabels = [];
+            let catData = [];
+            for (let key in catTotals) {
+                if (catTotals[key] > 0) {
+                    catLabels.push(key);
+                    catData.push(catTotals[key]);
+                }
+            }
+
+            // [C] 실제 차트 업데이트/그리기 로직 (Chart.js 인스턴스 핸들링)
+            const bgColors1 = ['#10B981', '#3B82F6', '#EF4444', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#64748B'];
+            const bgColors2 = ['#60A5FA', '#C084FC', '#FBBF24', '#34D399', '#818CF8', '#94A3B8'];
+
+            // 1) 좌측 포트폴리오 차트
+            if (pfLabels.length === 0) {
+                if (doughnutChart) { doughnutChart.destroy(); doughnutChart = null; }
+            } else {
+                if (doughnutChart) {
+                    doughnutChart.data.labels = pfLabels;
+                    doughnutChart.data.datasets[0].data = pfData;
+                    doughnutChart.update();
+                } else {
+                    doughnutChart = new Chart(document.getElementById('portfolioChart').getContext('2d'), {
+                        type: 'doughnut',
+                        data: { labels: pfLabels, datasets: [{ data: pfData, backgroundColor: bgColors1, borderWidth: 0, hoverOffset: 8 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#F8FAFC' } }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${Math.round(ctx.raw).toLocaleString()}원` } } } }
+                    });
+                }
+            }
+
+            // 2) 우측 카테고리 차트
+            if (catLabels.length === 0) {
+                if (catChart) { catChart.destroy(); catChart = null; }
+            } else {
+                if (catChart) {
+                    catChart.data.labels = catLabels;
+                    catChart.data.datasets[0].data = catData;
+                    catChart.update();
+                } else {
+                    catChart = new Chart(document.getElementById('categoryChart').getContext('2d'), {
+                        type: 'doughnut',
+                        data: { labels: catLabels, datasets: [{ data: catData, backgroundColor: bgColors2, borderWidth: 0, hoverOffset: 8 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#F8FAFC' } }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${Math.round(ctx.raw).toLocaleString()}원` } } } }
+                    });
+                }
+            }
+
+            // 3) 하단 현금흐름 분석 Stacked Bar Chart
+            const netMap = calcNetDeposits();
+            const cfLabels = [];
+            const cfDeposits = [];
+            const cfProfits = [];
+
+            accounts.forEach(acc => {
+                if (acc.balance <= 0) return; // 보이는 계좌만
+                const accStocks = stocks.filter(s => s.accountName === acc.name && s.accountCategory === acc.category);
+                const stockEval = accStocks.reduce((sum, s) => sum + s.evaluationAmount, 0);
+                const currentTotal = acc.balance + stockEval;
+                const netDep = netMap[acc.id] || 0;
+                const profit = currentTotal - netDep;
+
+                cfLabels.push(acc.name);
+                cfDeposits.push(Math.round(netDep));
+                cfProfits.push(Math.round(profit));
+            });
+
+            if (cfLabels.length === 0) {
+                if (cashflowChart) { cashflowChart.destroy(); cashflowChart = null; }
+            } else {
+                const cfDatasets = [
+                    {
+                        label: '순입금 (원금)',
+                        data: cfDeposits,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    },
+                    {
+                        label: '수익/손실',
+                        data: cfProfits,
+                        backgroundColor: cfProfits.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
+                        borderColor: cfProfits.map(v => v >= 0 ? 'rgba(16, 185, 129, 1)' : 'rgba(239, 68, 68, 1)'),
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }
+                ];
+
+                if (cashflowChart) {
+                    cashflowChart.data.labels = cfLabels;
+                    cashflowChart.data.datasets[0].data = cfDeposits;
+                    cashflowChart.data.datasets[1].data = cfProfits;
+                    cashflowChart.data.datasets[1].backgroundColor = cfProfits.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)');
+                    cashflowChart.data.datasets[1].borderColor = cfProfits.map(v => v >= 0 ? 'rgba(16, 185, 129, 1)' : 'rgba(239, 68, 68, 1)');
+                    cashflowChart.update();
+                } else {
+                    cashflowChart = new Chart(document.getElementById('cashflowChart').getContext('2d'), {
+                        type: 'bar',
+                        data: { labels: cfLabels, datasets: cfDatasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    stacked: true,
+                                    ticks: { color: '#94A3B8' },
+                                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                                },
+                                y: {
+                                    stacked: true,
+                                    ticks: {
+                                        color: '#94A3B8',
+                                        callback: (val) => val >= 10000 ? `${Math.round(val / 10000).toLocaleString()}만` : val.toLocaleString()
+                                    },
+                                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                                }
+                            },
+                            plugins: {
+                                legend: { position: 'top', labels: { color: '#F8FAFC', usePointStyle: true, padding: 15 } },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => ` ${ctx.dataset.label}: ${Math.round(ctx.raw).toLocaleString()}원`
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // 4) 시계열 라인 차트: 날짜별 누적 순입금 vs 누적 총자산 추이
+            const tsData = calcTimeSeriesData();
+            if (tsData.labels.length < 2) {
+                if (timeSeriesChart) { timeSeriesChart.destroy(); timeSeriesChart = null; }
+            } else {
+                const tsDatasets = [
+                    {
+                        label: '누적 순입금 (원금)',
+                        data: tsData.deposits,
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        borderWidth: 2
+                    },
+                    {
+                        label: '누적 총자산',
+                        data: tsData.assets,
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        borderWidth: 2
+                    }
+                ];
+
+                if (timeSeriesChart) {
+                    timeSeriesChart.data.labels = tsData.labels;
+                    timeSeriesChart.data.datasets[0].data = tsData.deposits;
+                    timeSeriesChart.data.datasets[1].data = tsData.assets;
+                    timeSeriesChart.update();
+                } else {
+                    timeSeriesChart = new Chart(document.getElementById('timeSeriesChart').getContext('2d'), {
+                        type: 'line',
+                        data: { labels: tsData.labels, datasets: tsDatasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            scales: {
+                                x: {
+                                    ticks: { color: '#94A3B8', maxRotation: 45 },
+                                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                                },
+                                y: {
+                                    ticks: {
+                                        color: '#94A3B8',
+                                        callback: (val) => val >= 10000 ? `${Math.round(val / 10000).toLocaleString()}만` : val.toLocaleString()
+                                    },
+                                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                                }
+                            },
+                            plugins: {
+                                legend: { position: 'top', labels: { color: '#F8FAFC', usePointStyle: true, padding: 15 } },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => ` ${ctx.dataset.label}: ${Math.round(ctx.raw).toLocaleString()}원`
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        // =========================================================================
+        // [6] 데이터 관리 기능 (백업, 복구, 초기화)
+        // =========================================================================
+
+        // 데이터 백업 (JSON 다운로드)
+        function backupData() {
+            const data = {
+                accounts: accounts,
+                stocks: stocks,
+                history: transactionHistory,
+                version: 'v3',
+                timestamp: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `asset_management_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 데이터 복구 트리거 (파일 선택창 열기)
+        function triggerRestore() {
+            document.getElementById('restore-file').click();
+        }
+
+        // 데이터 복구 처리
+        function restoreData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+
+                    // 기본 데이터 유효성 검사
+                    if (!data.accounts || !data.stocks || !data.history) {
+                        throw new Error('올바르지 않은 백업 파일 형식입니다.');
+                    }
+
+                    if (confirm('데이터를 복구하시겠습니까? 기존 데이터는 모두 삭제되고 백업 파일의 데이터로 대체됩니다.')) {
+                        accounts = data.accounts;
+                        stocks = data.stocks;
+                        transactionHistory = data.history;
+
+                        // saveData는 0원 계좌 필터링 기능이 있으므로 복구할 때는 직접 저장
+                        localStorage.setItem('dash_accounts_v3', JSON.stringify(accounts));
+                        localStorage.setItem('dash_stocks_v3', JSON.stringify(stocks));
+                        localStorage.setItem('dash_history_v3', JSON.stringify(transactionHistory));
+
+                        alert('데이터 복구가 완료되었습니다.');
+                        location.reload();
+                    }
+                } catch (err) {
+                    alert('복구 실패: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // 같은 파일 다시 선택 가능하도록 초기화
+        }
+
+        // 전체 데이터 초기화
+        function resetAllData() {
+            if (confirm('정말로 모든 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없으며, 모든 계좌와 주식 내역이 삭제됩니다.')) {
+                if (confirm('최종 확인: 정말로 초기화하시겠습니까?')) {
+                    localStorage.removeItem('dash_accounts_v3');
+                    localStorage.removeItem('dash_stocks_v3');
+                    localStorage.removeItem('dash_history_v3');
+                    alert('모든 데이터가 초기화되었습니다.');
+                    location.reload();
+                }
+            }
+        }
+
+        // [7] 페이지 초기 진입 및 새로고침 시 브라우저 자동 스크롤 방지 & 최상단 고정
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        window.addEventListener('DOMContentLoaded', () => {
+            window.scrollTo(0, 0);
+            
+            // 혹시 모를 렌더링 지연에 대비해 한 번 더 호출
+            setTimeout(() => { window.scrollTo(0, 0); }, 50);
+        });
+    </script>
+</body>
+
+</html>
