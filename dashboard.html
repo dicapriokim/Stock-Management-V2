@@ -3001,9 +3001,21 @@
                     
                     let typeText = txType === TX_TYPE.STOCK_BUY ? '매수' : '매도';
                     const typeMatch = tradeTypeFilter ? typeText === tradeTypeFilter : true;
-                    const fromMatch = tradeFromFilter ? h.from === tradeFromFilter : true;
-                    const toMatch = tradeToFilter ? h.to === tradeToFilter : true;
-                    return typeMatch && fromMatch && toMatch;
+                    
+                    // [버그 수정] 매수/매도 시 from/to 데이터 구조가 다르므로 올바르게 계좌/종목 식별
+                    let accountName = txType === TX_TYPE.STOCK_BUY ? h.from : h.to;
+                    let stockNameRaw = h.stockName;
+                    if (!stockNameRaw) {
+                        if (txType === TX_TYPE.STOCK_BUY) stockNameRaw = h.to.replace(/^주식 매수\s*\(/, '').replace(/\)$/, '');
+                        else if (txType === TX_TYPE.STOCK_SELL) {
+                            let match = h.from.match(/\((.*?)(?:\s*-.*)?\)/);
+                            stockNameRaw = match ? match[1] : h.from;
+                        }
+                    }
+
+                    const accMatch = tradeFromFilter ? accountName === tradeFromFilter : true;
+                    const stockMatch = tradeToFilter ? stockNameRaw === tradeToFilter : true;
+                    return typeMatch && accMatch && stockMatch;
                 });
 
                 // --- 1. 자금 이동 내역 렌더링 ---
