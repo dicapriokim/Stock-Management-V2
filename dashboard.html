@@ -2572,7 +2572,14 @@
                 
                 // [버그 수정] 매수/매도 시 from/to 데이터 구조가 다르므로 올바르게 계좌/종목 식별
                 let accountName = txType === TX_TYPE.STOCK_BUY ? h.from : h.to;
-                let stockNameRaw = h.stockName || '';
+                let stockNameRaw = h.stockName;
+                if (!stockNameRaw) {
+                    if (txType === TX_TYPE.STOCK_BUY) stockNameRaw = h.to.replace(/^주식 매수\s*\(/, '').replace(/\)$/, '');
+                    else if (txType === TX_TYPE.STOCK_SELL) {
+                        let match = h.from.match(/\((.*?)(?:\s*-.*)?\)/);
+                        stockNameRaw = match ? match[1] : h.from;
+                    }
+                }
 
                 const accMatch = tradeFromFilter ? accountName === tradeFromFilter : true;
                 const stockMatch = tradeToFilter ? stockNameRaw === tradeToFilter : true;
@@ -2780,12 +2787,21 @@
                 const txType = getHistoryType(h);
                 return txType === TX_TYPE.STOCK_BUY || txType === TX_TYPE.STOCK_SELL;
             });
-            // [버그 수정] 결제 계좌(tradeFroms)와 종목명(tradeTos) 목록을 명확히 추출
+            // [버그 수정] 결제 계좌(tradeFroms)와 종목명(tradeTos) 목록을 명확히 추출 (과거 누락 데이터 파싱 포함)
             const tradeAccounts = [...new Set(tradeHistory.map(h => {
                 return getHistoryType(h) === TX_TYPE.STOCK_BUY ? h.from : h.to;
             }).filter(Boolean))].sort();
             
-            const tradeStocks = [...new Set(tradeHistory.map(h => h.stockName).filter(Boolean))].sort();
+            const tradeStocks = [...new Set(tradeHistory.map(h => {
+                if (h.stockName) return h.stockName;
+                const txType = getHistoryType(h);
+                if (txType === TX_TYPE.STOCK_BUY) return h.to.replace(/^주식 매수\s*\(/, '').replace(/\)$/, '');
+                if (txType === TX_TYPE.STOCK_SELL) {
+                    let match = h.from.match(/\((.*?)(?:\s*-.*)?\)/);
+                    return match ? match[1] : h.from;
+                }
+                return '';
+            }).filter(Boolean))].sort();
 
             const updateSelect = (id, options) => {
                 const el = document.getElementById(id);
