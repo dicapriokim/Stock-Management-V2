@@ -1949,7 +1949,10 @@
                 switch (txType) {
                     case TX_TYPE.STOCK_BUY:
                         if (item.stockName) {
-                            let stock = stocks.find(s => s.name === item.stockName);
+                            // [버그 수정] 다중 계좌 동일 종목 식별 (계좌명 일치 여부 확인)
+                            let stock = stocks.find(s => s.name === item.stockName && s.accountName === item.from);
+                            if (!stock) stock = stocks.find(s => s.name === item.stockName); // 하위 호환성 (Legacy)
+
                             if (stock) {
                                 stock.quantity -= (item.quantity || 0);
                                 stock.investAmount -= (item.amount || 0);
@@ -1964,7 +1967,10 @@
                         break;
                     case TX_TYPE.STOCK_SELL:
                         if (item.stockName) {
-                            let stock = stocks.find(s => s.name === item.stockName);
+                            // [버그 수정] 다중 계좌 동일 종목 식별
+                            let stock = stocks.find(s => s.name === item.stockName && s.accountName === item.to);
+                            if (!stock) stock = stocks.find(s => s.name === item.stockName); // 하위 호환성
+
                             if (stock) {
                                 stock.quantity += (item.sellQty || 0);
                                 stock.investAmount += (item.costReduction || 0);
@@ -1977,6 +1983,7 @@
                                 stocks.push({
                                     id: Date.now(),
                                     name: item.stockName,
+                                    ticker: item.stockTicker || "", // [버그 수정] 매도 취소 시 종목코드 복원
                                     investAmount: recoveredInvest,
                                     buyPrice: recoveredBuyPrice,
                                     currentPrice: recoveredBuyPrice,
@@ -1985,7 +1992,7 @@
                                     profitLoss: 0,
                                     accountName: item.to,
                                     accountCategory: item.toAccCategory
-                    });
+                                });
                             }
                         }
                         break;
@@ -2286,10 +2293,18 @@
             // 3. 주식 데이터 삭제
             stocks.splice(sIdx, 1);
 
-            // 관련 히스토리도 삭제 (최근 내역 중 해당 종목 매수 건 찾기)
-            const hIdx = transactionHistory.findIndex(h => getHistoryType(h) === TX_TYPE.STOCK_BUY && (h.stockName === stock.name || h.to.includes(`(${stock.name})`)) && h.amount === stock.investAmount);
-            if (hIdx !== -1) {
-                transactionHistory.splice(hIdx, 1);
+            // 논리 오류 수정: 다회차 매수한 주식 수정 시 모든 연관 매수 기록을 삭제해야 잔고가 중복 복원되는 버그를 방지할 수 있습니다.
+            // 추가 수정: 다중 계좌에서 동일 종목을 운영할 경우, 현재 계좌의 매수 기록만 삭제하도록 조건 추가
+            let indicesToRemove = [];
+            transactionHistory.forEach((h, idx) => {
+                if (getHistoryType(h) === TX_TYPE.STOCK_BUY && 
+                    (h.stockName === stock.name || h.to.includes(`(${stock.name})`)) &&
+                    (h.from === stock.accountName || h.fromAccId === acc.id)) {
+                    indicesToRemove.push(idx);
+                }
+            });
+            for (let i = indicesToRemove.length - 1; i >= 0; i--) {
+                transactionHistory.splice(indicesToRemove[i], 1);
             }
 
             saveData();
@@ -2385,6 +2400,7 @@
                 realizedProfit: Math.round(realizedProfit),
                 isStockSell: true,
                 stockName: stock.name,
+                stockTicker: stock.ticker || "", // [버그 수정] 매도 기록에 종목코드 메타데이터 저장
                 sellQty: sellQty,
                 costReduction: costReduction
             });
@@ -2402,6 +2418,7 @@
             }
 
             currentHistoryPage = 1; // [추가] 신규 거래 시 1페이지로 리셋
+            currentTradePage = 1; // [추가] 주식 거래 탭도 리셋
             saveData();
             renderAll();
             closeSellModal();
@@ -2441,6 +2458,7 @@
                         realizedProfit: Math.round(realizedProfit),
                         isStockSell: true,
                         stockName: targetStock.name,
+                        stockTicker: targetStock.ticker || "", // [버그 수정] 전액 매도 기록에 종목코드 메타데이터 저장
                         sellQty: targetStock.quantity,
                         costReduction: targetStock.investAmount
                     });
@@ -2448,6 +2466,8 @@
             }
 
             stocks = stocks.filter(s => s.id !== id);
+            currentHistoryPage = 1;
+            currentTradePage = 1;
             saveData();
             renderAll();
         }
