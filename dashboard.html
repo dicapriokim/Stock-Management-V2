@@ -1113,8 +1113,22 @@
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 12%;">결제된 계좌 (분류)</th>
-                                <th style="width: 15%;">매수 종목명</th>
+                                <th style="width: 12%; position: relative;">
+                                    <div style="display: flex; justify-content: flex-start; gap: 4px; align-items: center; width: 100%;">
+                                        <span id="label-stock-acc">결제된 계좌 (분류)</span>
+                                        <span id="indicator-stock-acc" style="color: var(--accent); display: none;">✔️</span>
+                                    </div>
+                                    <select id="filter-stock-acc" onchange="applyFilters()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance:none; appearance:none;">
+                                    </select>
+                                </th>
+                                <th style="width: 15%; position: relative;">
+                                    <div style="display: flex; justify-content: flex-start; gap: 4px; align-items: center; width: 100%;">
+                                        <span id="label-stock-name">매수 종목명</span>
+                                        <span id="indicator-stock-name" style="color: var(--accent); display: none;">✔️</span>
+                                    </div>
+                                    <select id="filter-stock-name" onchange="applyFilters()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance:none; appearance:none;">
+                                    </select>
+                                </th>
                                 <th class="text-right" style="width: 10%;">현재 시세</th>
                                 <th class="text-right" style="width: 9%;">보유 수량</th>
                                 <th class="text-right" style="width: 11%;">투자 원금</th>
@@ -1140,9 +1154,31 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th style="width: 25%;">날짜</th>
-                                    <th style="width: 20%;">출금처</th>
-                                    <th style="width: 20%;">입금처</th>
+                                    <th style="width: 15%;">날짜</th>
+                                    <th style="width: 10%; position: relative;">
+                                        <div style="display: flex; justify-content: center; gap: 4px; align-items: center; width: 100%;">
+                                            <span id="label-history-type">구분</span>
+                                            <span id="indicator-history-type" style="color: var(--accent); display: none;">✔️</span>
+                                        </div>
+                                        <select id="filter-history-type" onchange="applyFilters()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance:none; appearance:none;">
+                                        </select>
+                                    </th>
+                                    <th style="width: 20%; position: relative;">
+                                        <div style="display: flex; justify-content: flex-start; gap: 4px; align-items: center; width: 100%;">
+                                            <span id="label-history-from">보낸 곳</span>
+                                            <span id="indicator-history-from" style="color: var(--accent); display: none;">✔️</span>
+                                        </div>
+                                        <select id="filter-history-from" onchange="applyFilters()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance:none; appearance:none;">
+                                        </select>
+                                    </th>
+                                    <th style="width: 20%; position: relative;">
+                                        <div style="display: flex; justify-content: flex-start; gap: 4px; align-items: center; width: 100%;">
+                                            <span id="label-history-to">받는 곳</span>
+                                            <span id="indicator-history-to" style="color: var(--accent); display: none;">✔️</span>
+                                        </div>
+                                        <select id="filter-history-to" onchange="applyFilters()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance:none; appearance:none;">
+                                        </select>
+                                    </th>
                                     <th class="text-right" style="width: 20%;">금액 (KRW)</th>
                                     <th class="text-center" style="width: 15%;">관리</th>
                                 </tr>
@@ -1164,10 +1200,33 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th style="width: 25%;">날짜</th>
-                                    <th style="width: 20%;">출금처</th>
-                                    <th style="width: 20%;">입금처</th>
-                                    <th class="text-right" style="width: 20%;">금액 (KRW)</th>
+                                    <th style="width: 15%;">날짜</th>
+                                    <th style="width: 20%; position: relative;">
+                                        <div style="display: flex; justify-content: flex-start; gap: 4px; align-items: center; width: 100%;">
+                                            <span id="label-trade-from">결제 계좌</span>
+                                            <span id="indicator-trade-from" style="color: var(--accent); display: none;">✔️</span>
+                                        </div>
+                                        <select id="filter-trade-from" onchange="applyFilters()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance:none; appearance:none;">
+                                        </select>
+                                    </th>
+                                    <th style="width: 10%; position: relative;">
+                                        <div style="display: flex; justify-content: center; gap: 4px; align-items: center; width: 100%;">
+                                            <span id="label-trade-type">구분</span>
+                                            <span id="indicator-trade-type" style="color: var(--accent); display: none;">✔️</span>
+                                        </div>
+                                        <select id="filter-trade-type" onchange="applyFilters()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance:none; appearance:none;">
+                                        </select>
+                                    </th>
+                                    <th style="width: 15%; position: relative;">
+                                        <div style="display: flex; justify-content: flex-start; gap: 4px; align-items: center; width: 100%;">
+                                            <span id="label-trade-to">종목명</span>
+                                            <span id="indicator-trade-to" style="color: var(--accent); display: none;">✔️</span>
+                                        </div>
+                                        <select id="filter-trade-to" onchange="applyFilters()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance:none; appearance:none;">
+                                        </select>
+                                    </th>
+                                    <th class="text-right" style="width: 10%;">수량</th>
+                                    <th class="text-right" style="width: 15%;">금액 (KRW)</th>
                                     <th class="text-center" style="width: 15%;">관리</th>
                                 </tr>
                             </thead>
@@ -2454,16 +2513,44 @@
             const historyBadge = document.getElementById('tab-badge-history');
             const tradeBadge = document.getElementById('tab-badge-trade');
 
-            const cashHistory = transactionHistory.filter(h => {
-                const txType = getHistoryType(h);
-                return txType === TX_TYPE.EXTERNAL_IN || txType === TX_TYPE.EXTERNAL_OUT || txType === TX_TYPE.INTERNAL_TRANSFER;
-            });
-            const tradeHistory = transactionHistory.filter(h => {
-                const txType = getHistoryType(h);
-                return txType === TX_TYPE.STOCK_BUY || txType === TX_TYPE.STOCK_SELL;
+            // 필터링 상태 반영을 위해 DOM에서 값을 가져옴 (정확도 매치)
+            const stockAccFilter = document.getElementById('filter-stock-acc')?.value || '';
+            const stockNameFilter = document.getElementById('filter-stock-name')?.value || '';
+            let filteredStocks = stocks.filter(s => {
+                const accMatch = stockAccFilter ? s.accountName === stockAccFilter : true;
+                const nameMatch = stockNameFilter ? s.name === stockNameFilter : true;
+                return accMatch && nameMatch;
             });
 
-            if (stockBadge) stockBadge.textContent = stocks.length;
+            const historyTypeFilter = document.getElementById('filter-history-type')?.value || '';
+            const historyFromFilter = document.getElementById('filter-history-from')?.value || '';
+            const historyToFilter = document.getElementById('filter-history-to')?.value || '';
+            const cashHistory = transactionHistory.filter(h => {
+                const txType = getHistoryType(h);
+                if (txType !== TX_TYPE.EXTERNAL_IN && txType !== TX_TYPE.EXTERNAL_OUT && txType !== TX_TYPE.INTERNAL_TRANSFER) return false;
+                
+                let typeText = txType === TX_TYPE.EXTERNAL_IN ? '입금' : (txType === TX_TYPE.EXTERNAL_OUT ? '출금' : '이체');
+                const typeMatch = historyTypeFilter ? typeText === historyTypeFilter : true;
+                const fromMatch = historyFromFilter ? h.from === historyFromFilter : true;
+                const toMatch = historyToFilter ? h.to === historyToFilter : true;
+                return typeMatch && fromMatch && toMatch;
+            });
+
+            const tradeTypeFilter = document.getElementById('filter-trade-type')?.value || '';
+            const tradeFromFilter = document.getElementById('filter-trade-from')?.value || '';
+            const tradeToFilter = document.getElementById('filter-trade-to')?.value || '';
+            const tradeHistory = transactionHistory.filter(h => {
+                const txType = getHistoryType(h);
+                if (txType !== TX_TYPE.STOCK_BUY && txType !== TX_TYPE.STOCK_SELL) return false;
+
+                let typeText = txType === TX_TYPE.STOCK_BUY ? '매수' : '매도';
+                const typeMatch = tradeTypeFilter ? typeText === tradeTypeFilter : true;
+                const fromMatch = tradeFromFilter ? h.from === tradeFromFilter : true;
+                const toMatch = tradeToFilter ? h.to === tradeToFilter : true;
+                return typeMatch && fromMatch && toMatch;
+            });
+
+            if (stockBadge) stockBadge.textContent = filteredStocks.length;
             if (historyBadge) historyBadge.textContent = cashHistory.length;
             if (tradeBadge) tradeBadge.textContent = tradeHistory.length;
         }
@@ -2648,8 +2735,78 @@
             profitUI.className = `sub-amount ${col(totalProfit)}`;
         }
 
+        // 드롭다운 필터 옵션 동적 생성
+        function updateFilterDropdowns() {
+            const stockAccs = [...new Set(stocks.map(s => s.accountName).filter(Boolean))].sort();
+            const stockNames = [...new Set(stocks.map(s => s.name).filter(Boolean))].sort();
+
+            const cashHistory = transactionHistory.filter(h => {
+                const txType = getHistoryType(h);
+                return txType === TX_TYPE.EXTERNAL_IN || txType === TX_TYPE.EXTERNAL_OUT || txType === TX_TYPE.INTERNAL_TRANSFER;
+            });
+            const cashFroms = [...new Set(cashHistory.map(h => h.from).filter(Boolean))].sort();
+            const cashTos = [...new Set(cashHistory.map(h => h.to).filter(Boolean))].sort();
+
+            const tradeHistory = transactionHistory.filter(h => {
+                const txType = getHistoryType(h);
+                return txType === TX_TYPE.STOCK_BUY || txType === TX_TYPE.STOCK_SELL;
+            });
+            const tradeFroms = [...new Set(tradeHistory.map(h => h.from).filter(Boolean))].sort();
+            const tradeTos = [...new Set(tradeHistory.map(h => h.to).filter(Boolean))].sort();
+
+            const updateSelect = (id, options) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const currentVal = el.value;
+                el.innerHTML = `<option value="" style="background:var(--card-bg); color:var(--text-main);">전체 보기 (필터 해제)</option>`;
+                options.forEach(opt => {
+                    const o = document.createElement('option');
+                    o.value = opt;
+                    o.textContent = opt;
+                    o.style.background = 'var(--card-bg)';
+                    o.style.color = 'var(--text-main)';
+                    el.appendChild(o);
+                });
+                if (options.includes(currentVal)) {
+                    el.value = currentVal;
+                }
+                
+                // UI 인디케이터 업데이트 (필터 켜짐 상태 표시)
+                const indicator = document.getElementById(id.replace('filter-', 'indicator-'));
+                const label = document.getElementById(id.replace('filter-', 'label-'));
+                if (indicator && label) {
+                    if (el.value) {
+                        indicator.style.display = 'inline';
+                        label.title = `필터링 됨: ${el.value}`;
+                    } else {
+                        indicator.style.display = 'none';
+                        label.title = '';
+                    }
+                }
+            };
+
+            updateSelect('filter-stock-acc', stockAccs);
+            updateSelect('filter-stock-name', stockNames);
+            updateSelect('filter-history-type', ['입금', '출금', '이체']);
+            updateSelect('filter-history-from', cashFroms);
+            updateSelect('filter-history-to', cashTos);
+            updateSelect('filter-trade-type', ['매수', '매도']);
+            updateSelect('filter-trade-from', tradeFroms);
+            updateSelect('filter-trade-to', tradeTos);
+        }
+
+        // 필터링 적용 함수 (입력값 변경 시 호출)
+        function applyFilters() {
+            currentStockPage = 1;
+            currentHistoryPage = 1;
+            currentTradePage = 1;
+            renderTables();
+            mirrorDetailTables();
+        }
+
         // [테이블 렌더링] 계좌와 주식 목록 (카테고리 UI/태그 색상 적용)
         function renderTables() {
+            updateFilterDropdowns(); // 렌더링 전 필터 목록 최신화
             accTbody.innerHTML = '';
             // 이중 방어 코드: 객체가 존재하고 isActive가 false가 아닌 경우만 렌더링
             const visibleAccounts = accounts.filter(acc => acc && acc.isActive !== false && acc.balance > 0);
@@ -2690,12 +2847,23 @@
             }
 
             stockTbody.innerHTML = '';
-            if (stocks.length === 0) {
-                stockTbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted" style="padding:1.5rem;">보유 주식이 없습니다. 결제 계좌를 선택해 매수해 보세요.</td></tr>`;
+            
+            // 필터링 적용 (정확도 매치)
+            const stockAccFilter = document.getElementById('filter-stock-acc')?.value || '';
+            const stockNameFilter = document.getElementById('filter-stock-name')?.value || '';
+            
+            let filteredStocks = stocks.filter(s => {
+                const accMatch = stockAccFilter ? s.accountName === stockAccFilter : true;
+                const nameMatch = stockNameFilter ? s.name === stockNameFilter : true;
+                return accMatch && nameMatch;
+            });
+
+            if (filteredStocks.length === 0) {
+                stockTbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted" style="padding:1.5rem;">조건에 맞는 주식 내역이 없거나 보유 주식이 없습니다.</td></tr>`;
                 renderStockPagination(0);
             } else {
                 // 주식 정렬 (1순위: 결제된 계좌명, 2순위: 종목명)
-                const sortedStocks = [...stocks].sort((a, b) => {
+                const sortedStocks = [...filteredStocks].sort((a, b) => {
                     const accA = a.accountName || '';
                     const accB = b.accountName || '';
                     if (accA !== accB) return accA.localeCompare(accB);
@@ -2757,19 +2925,41 @@
                 const tradeTbody = document.getElementById('trade-table-body');
                 if (tradeTbody) tradeTbody.innerHTML = '';
 
-                // 분리 로직 적용
+                // 필터링 텍스트 가져오기 (정확도 매치)
+                const historyTypeFilter = document.getElementById('filter-history-type')?.value || '';
+                const historyFromFilter = document.getElementById('filter-history-from')?.value || '';
+                const historyToFilter = document.getElementById('filter-history-to')?.value || '';
+                
+                const tradeTypeFilter = document.getElementById('filter-trade-type')?.value || '';
+                const tradeFromFilter = document.getElementById('filter-trade-from')?.value || '';
+                const tradeToFilter = document.getElementById('filter-trade-to')?.value || '';
+
+                // 분리 및 필터링 로직 동시 적용
                 const cashHistory = transactionHistory.filter(h => {
                     const txType = getHistoryType(h);
-                    return txType === TX_TYPE.EXTERNAL_IN || txType === TX_TYPE.EXTERNAL_OUT || txType === TX_TYPE.INTERNAL_TRANSFER;
+                    if (txType !== TX_TYPE.EXTERNAL_IN && txType !== TX_TYPE.EXTERNAL_OUT && txType !== TX_TYPE.INTERNAL_TRANSFER) return false;
+                    
+                    let typeText = txType === TX_TYPE.EXTERNAL_IN ? '입금' : (txType === TX_TYPE.EXTERNAL_OUT ? '출금' : '이체');
+                    const typeMatch = historyTypeFilter ? typeText === historyTypeFilter : true;
+                    const fromMatch = historyFromFilter ? h.from === historyFromFilter : true;
+                    const toMatch = historyToFilter ? h.to === historyToFilter : true;
+                    return typeMatch && fromMatch && toMatch;
                 });
+
                 const tradeHistory = transactionHistory.filter(h => {
                     const txType = getHistoryType(h);
-                    return txType === TX_TYPE.STOCK_BUY || txType === TX_TYPE.STOCK_SELL;
+                    if (txType !== TX_TYPE.STOCK_BUY && txType !== TX_TYPE.STOCK_SELL) return false;
+                    
+                    let typeText = txType === TX_TYPE.STOCK_BUY ? '매수' : '매도';
+                    const typeMatch = tradeTypeFilter ? typeText === tradeTypeFilter : true;
+                    const fromMatch = tradeFromFilter ? h.from === tradeFromFilter : true;
+                    const toMatch = tradeToFilter ? h.to === tradeToFilter : true;
+                    return typeMatch && fromMatch && toMatch;
                 });
 
                 // --- 1. 자금 이동 내역 렌더링 ---
                 if (cashHistory.length === 0) {
-                    historyTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted" style="padding:1.5rem;">자금 이동 내역이 없습니다.</td></tr>`;
+                    historyTbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:1.5rem;">조건에 맞는 자금 이동 내역이 없습니다.</td></tr>`;
                     renderHistoryPagination(0);
                 } else {
                     const sortedHistory = [...cashHistory].sort((a, b) => {
@@ -2792,12 +2982,21 @@
                         let signStr = isOut ? '-' : (isNeutral ? '' : '+');
                         let cssClass = isOut ? 'loss-text' : (isNeutral ? '' : 'cash-text');
 
+                        let cleanFrom = history.from.replace(/\s*\((입금|출금)\)/g, '').trim();
+                        let cleanTo = history.to.replace(/\s*\((입금|출금)\)/g, '').trim();
+
+                        let typeBadge = '';
+                        if (isIn) typeBadge = '<span class="tag" style="background: rgba(16, 185, 129, 0.1); color: var(--cash); border: 1px solid rgba(16, 185, 129, 0.4);">입금</span>';
+                        else if (isOut) typeBadge = '<span class="tag" style="background: rgba(59, 130, 246, 0.1); color: var(--loss); border: 1px solid rgba(59, 130, 246, 0.4);">출금</span>';
+                        else typeBadge = '<span class="tag" style="background: rgba(148, 163, 184, 0.1); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.4);">이체</span>';
+
                         let tr = document.createElement('tr');
                         tr.className = 'history-row';
                         tr.innerHTML = `
                             <td>${history.date}</td>
-                            <td><span class="tag tag-default">${history.from}</span></td>
-                            <td class="font-bold">${history.to}</td>
+                            <td class="text-center">${typeBadge}</td>
+                            <td><span class="tag tag-default">${cleanFrom}</span></td>
+                            <td class="font-bold">${cleanTo}</td>
                             <td class="text-right font-bold ${cssClass}">${signStr}${fmt(history.amount)}</td>
                             <td class="text-center">
                                 <button onclick="editHistory(${history.id})" class="delete-btn" style="border-color:var(--accent); color:var(--accent); margin-right:5px;">수정</button>
@@ -2810,7 +3009,7 @@
                     for (let i = pageItems.length; i < historyItemsPerPage; i++) {
                         let emptyTr = document.createElement('tr');
                         emptyTr.className = 'history-row';
-                        emptyTr.innerHTML = `<td colspan="5" style="border-bottom: 1px solid transparent;">&nbsp;</td>`;
+                        emptyTr.innerHTML = `<td colspan="6" style="border-bottom: 1px solid transparent;">&nbsp;</td>`;
                         historyTbody.appendChild(emptyTr);
                     }
                     renderHistoryPagination(totalPages);
@@ -2819,7 +3018,7 @@
                 // --- 2. 주식 거래 내역 렌더링 ---
                 if (tradeTbody) {
                     if (tradeHistory.length === 0) {
-                        tradeTbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted" style="padding:1.5rem;">주식 거래 내역이 없습니다.</td></tr>`;
+                        tradeTbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:1.5rem;">조건에 맞는 주식 거래 내역이 없습니다.</td></tr>`;
                         renderTradePagination(0);
                     } else {
                         const sortedTrade = [...tradeHistory].sort((a, b) => {
@@ -2841,35 +3040,56 @@
                             let signStr = isOut ? '-' : '+';
                             let cssClass = isOut ? 'loss-text' : 'cash-text';
 
-                            let extraInfo = '';
-                            let qtyPart = '';
-                            let profitPart = '';
+                            let typeBadge = '';
+                            if (isOut) typeBadge = '<span class="tag" style="background: rgba(59, 130, 246, 0.1); color: var(--loss); border: 1px solid rgba(59, 130, 246, 0.4);">매수</span>';
+                            else if (isIn) typeBadge = '<span class="tag" style="background: rgba(16, 185, 129, 0.1); color: var(--cash); border: 1px solid rgba(16, 185, 129, 0.4);">매도</span>';
 
-                            if (txType === TX_TYPE.STOCK_BUY && history.quantity) {
-                                qtyPart = `<span style="color: var(--text-muted);">(매수: ${history.quantity.toLocaleString()}주)</span>`;
-                            } else if (txType === TX_TYPE.STOCK_SELL && history.sellQty) {
-                                qtyPart = `<span style="color: var(--text-muted);">(매도: ${history.sellQty.toLocaleString()}주)</span>`;
+                            let accountName = '';
+                            let stockNameRaw = history.stockName || '';
+
+                            if (isOut) {
+                                accountName = history.from || '';
+                                if (!stockNameRaw) {
+                                    stockNameRaw = history.to.replace(/^주식 매수\s*\(/, '').replace(/\)$/, '');
+                                }
+                            } else if (isIn) {
+                                accountName = history.to || '';
+                                if (!stockNameRaw) {
+                                    let match = history.from.match(/\((.*?)(?:\s*-.*)?\)/);
+                                    if (match) stockNameRaw = match[1];
+                                    else stockNameRaw = history.from;
+                                }
                             }
 
+                            let tickerInfo = '';
+                            let stockObj = stocks.find(s => s.name === stockNameRaw);
+                            if (stockObj && stockObj.ticker) {
+                                tickerInfo = ` <span style="font-size:0.75rem; color:var(--text-muted);">(${stockObj.ticker})</span>`;
+                            }
+
+                            let tradeQty = 0;
+                            if (isOut) tradeQty = history.quantity || 0;
+                            else if (isIn) tradeQty = history.sellQty || 0;
+
+                            let profitPart = '';
                             if (history.realizedProfit !== undefined && history.realizedProfit !== null) {
                                 const pColor = history.realizedProfit > 0 ? 'var(--profit)' : (history.realizedProfit < 0 ? 'var(--loss)' : 'var(--text-muted)');
                                 const pSign = history.realizedProfit > 0 ? '+' : '';
-                                profitPart = `<span style="color: ${pColor}; font-weight: 700; margin-left: 6px;">[실현 손익: ${pSign}${history.realizedProfit.toLocaleString()}원]</span>`;
-                            }
-
-                            if (qtyPart || profitPart) {
-                                extraInfo = `<div style="font-size: 0.75rem; margin-top: 4px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
-                                    ${qtyPart} ${profitPart}
-                                </div>`;
+                                profitPart = `<div style="font-size: 0.75rem; color: ${pColor}; font-weight: 700; margin-top: 4px;">[손익: ${pSign}${history.realizedProfit.toLocaleString()}원]</div>`;
                             }
 
                             let tr = document.createElement('tr');
                             tr.className = 'history-row';
                             tr.innerHTML = `
                                 <td>${history.date}</td>
-                                <td><span class="tag tag-default">${history.from}</span></td>
-                                <td class="font-bold">${history.to}${extraInfo}</td>
-                                <td class="text-right font-bold ${cssClass}">${signStr}${fmt(history.amount)}</td>
+                                <td><span class="tag tag-default">${accountName}</span></td>
+                                <td class="text-center">${typeBadge}</td>
+                                <td class="font-bold">${stockNameRaw}${tickerInfo}</td>
+                                <td class="text-right">${tradeQty.toLocaleString()}주</td>
+                                <td class="text-right font-bold ${cssClass}">
+                                    ${signStr}${fmt(history.amount)}
+                                    ${profitPart}
+                                </td>
                                 <td class="text-center">
                                     <button onclick="editHistory(${history.id})" class="delete-btn" style="border-color:var(--accent); color:var(--accent); margin-right:5px;">수정</button>
                                     <button onclick="removeHistory(${history.id})" class="delete-btn">삭제</button>
@@ -2881,7 +3101,7 @@
                         for (let i = pageItems.length; i < historyItemsPerPage; i++) {
                             let emptyTr = document.createElement('tr');
                             emptyTr.className = 'history-row';
-                            emptyTr.innerHTML = `<td colspan="5" style="border-bottom: 1px solid transparent;">&nbsp;</td>`;
+                            emptyTr.innerHTML = `<td colspan="7" style="border-bottom: 1px solid transparent;">&nbsp;</td>`;
                             tradeTbody.appendChild(emptyTr);
                         }
                         renderTradePagination(totalPages);
