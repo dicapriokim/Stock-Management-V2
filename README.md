@@ -1,5 +1,5 @@
 # 📈 통합 자산 관리 대시보드 (Personal Asset Management Dashboard)
-> **현재 릴리즈 버전**: `v4.2.3`
+> **현재 릴리즈 버전**: `v4.2.4`
 
 ## 📌 프로젝트 개요
 HTML, CSS, Vanilla JavaScript로 작성된 프론트엔드 대시보드와 이를 지원하는 **Node.js Express 백엔드 API 서버**로 구성된 자산 관리 애플리케이션입니다.
@@ -105,7 +105,7 @@ Node.js(v18 이상, v24 권장)가 설치된 환경에서 수동으로 구동하
 * 개발 이력 및 에이전트 캐싱 파일(`.agent/docs/`) 등은 이미 `.gitignore`에 등록되어 GitHub 퍼블릭 저장소로 노출되는 것이 방지되고 있습니다.
 
 ---
-**Designed by 돼지지렁이 (PigWorm) v4.2.1**
+**Designed by 돼지지렁이 (PigWorm) v4.2.4**
 ---
 
 ## 📄 라이선스 (License)

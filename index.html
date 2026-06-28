@@ -221,7 +221,7 @@
 
         th,
         td {
-            padding: 0.75rem 0.5rem;
+            padding: 0.55rem 0.5rem;
             text-align: left;
             border-bottom: 1px solid var(--border);
             font-size: 0.9rem;
@@ -241,7 +241,7 @@
 
         /* 거래 내역 고정 높이 보정을 위한 전용 스타일 */
         .history-row {
-            height: 65px;
+            height: 52px;
             /* 데이터 내용에 관계없이 일관된 높이 보장 */
         }
 
@@ -1265,7 +1265,7 @@
     
     <!-- 푸터 영역 -->
     <footer style="text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: 2rem;">
-        버전: v4.2.3 | 디자인 by 돼지지렁이
+        버전: v4.2.4 | 디자인 by 돼지지렁이
     </footer>
 
     <!-- 📉 주식 부분 매도 전용 모달 -->
@@ -1652,8 +1652,8 @@
         let currentHistoryPage = 1;
         let currentTradePage = 1;
         let currentStockPage = 1;
-        const historyItemsPerPage = 10;
-        const stockItemsPerPage = 9;
+        const historyItemsPerPage = 8;
+        const stockItemsPerPage = 8;
 
         // 이체 폼 껐다 켜기 (평탄화된 레이아웃 정밀 제어)
         function toggleTransferFields() {
