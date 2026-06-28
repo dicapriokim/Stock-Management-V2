@@ -1,46 +1,103 @@
 # 📈 통합 자산 관리 대시보드 (Personal Asset Management Dashboard)
 
 ## 📌 프로젝트 개요
-HTML, CSS, Vanilla JavaScript로 작성된 단일 페이지 어플리케이션(SPA)으로, 브라우저 환경에서 동작하는 **완전한 로컬 기반 자산 관리 대시보드**입니다.
-서버나 데이터베이스 연동 없이 웹 브라우저의 `LocalStorage`만을 활용하여 **개인 금융 데이터가 외부에 유출되지 않는 강력한 프라이버시**를 제공합니다.
+HTML, CSS, Vanilla JavaScript로 작성된 프론트엔드 대시보드와 이를 지원하는 **Node.js Express 백엔드 API 서버**로 구성된 자산 관리 애플리케이션입니다.
 
-사용자는 다양한 계좌 카테고리(일반, 연금, ISA, 예적금 등)별로 자산을 분리 관리할 수 있으며, 실제 주식 투자와 현금 흐름을 완벽히 동기화하여 실시간으로 전체 포트폴리오를 시각화합니다.
+기존 브라우저 환경(Chrome, Edge 등)에서 로컬 파일 실행 시 발생하는 CORS(Cross-Origin Resource Sharing) 제약 및 외부 API 직접 호출의 불안정함을 해결하기 위해 백엔드 중계 서버를 도입하였습니다. 토스증권 Open API를 통한 실시간 시세 조회 및 네이버 금융을 활용한 안정적인 Fallback 스크래핑 기능을 통해 항상 최신의 자산 가치와 포트폴리오 상태를 시각화합니다.
+
+모든 자산 원장 데이터는 브라우저의 `LocalStorage`에 안전하게 보관되며, 백엔드는 실시간 시세 중계 역할만을 담당하여 프라이버시를 강력하게 보존합니다.
+
+---
 
 ## ✨ 주요 기능
-1. **단일 원장 기반 무결성 (Ledger Sync)**
-   - 현금 입출금, 계좌 간 자금 이동, 주식 매수 및 매도시 모든 내역이 거래 장부(History)에 기록됩니다.
-   - 계좌 잔고는 텍스트가 아닌 실제 거래 기록을 기반으로 동적 재계산되어 데이터 오류를 원천 차단합니다.
-2. **독립적이고 최적화된 내역 탭 지원**
-   - **자금 이동 내역**: 외부 입금, 출금, 내부 이체 기록을 직관적인 뱃지(Badge) 형태의 구분 열과 함께 표시.
-   - **주식 거래 내역**: 주식 매수/매도 이력 전용 렌더링(결제 계좌, 종목명 깔끔한 분리 및 실현 손익 추적).
-   - **실시간 자산 상세**: 결제된 계좌, 종목별 투자 원금, 현재 시세, 실시간 손익금 등 확인 (계좌명 우선 정렬 지원).
-3. **직관적인 UI / 시각화 대시보드**
-   - 테이블 헤더 내장형 드롭다운 필터 및 데이터 시각적 태그(Badge) UI를 통한 탁월한 가독성.
+1. **Express 백엔드 API & CORS 문제 완벽 해결**
+   - Node.js 24 기반 백엔드 서버(`server.js`)가 토스증권 Open API 연동 및 데이터 가공을 전담하여 브라우저 CORS 오류를 100% 원천 차단합니다.
+   - 단일 엔드포인트 `/api/prices`를 통해 다수의 종목 현재가를 병렬 수집하여 일괄 응답합니다.
+2. **토스증권 API & 네이버 금융 Fallback 연동**
+   - 토스증권 Open API(OAuth2 토큰 인증)를 사용하여 정확하고 빠른 실시간 시세를 조회합니다.
+   - 토스증권 토큰 오류 또는 지원되지 않는 종목 번호 조회 시, **네이버 금융 시세 페이지를 실시간으로 크롤링**하여 막힘없는 Fallback 서비스를 지원합니다.
+3. **단일 원장 기반 무결성 (Ledger Sync)**
+   - 현금 입출금, 계좌 간 자금 이동, 주식 매수 및 매도시 모든 내역이 거래 장부(History)에 기록되며 계좌 잔고가 실시간 동적 재계산됩니다.
+4. **직관적인 UI / 시각화 대시보드**
    - Chart.js를 사용한 **포트폴리오 비중** 및 **자산 카테고리 분포** 도넛 차트.
    - 순입금(원금) 대비 총자산의 증감 추이를 확인할 수 있는 **시계열 라인 차트**.
    - 계좌별 손익 상태를 한눈에 보여주는 **현금 흐름 Bar 차트**.
-4. **안전한 데이터 관리 (백업/복구)**
-   - JSON 형태로 데이터를 로컬 장치에 백업하거나 다운로드한 JSON 파일을 불러와 손쉽게 데이터를 복원할 수 있습니다.
+5. **안전한 데이터 관리 (백업/복구)**
+   - JSON 형태로 데이터를 로컬 장치에 백업하거나 불러와 손쉽게 데이터를 복원할 수 있습니다.
 
-## 🚀 사용법 (Getting Started)
+---
 
-### 1. 실행 방법
-별도의 설치나 서버 구동이 필요 없습니다. 저장소에 있는 `dashboard.html` 파일을 크롬, 엣지, 사파리 등의 **웹 브라우저에 드래그 앤 드롭**하거나 더블 클릭하여 실행합니다.
+## 🚀 실행 및 배포 가이드 (Getting Started)
 
-### 2. 기본 활용 워크플로우
-1. **계좌 생성**: 상단의 `💵 계좌 관리` 폼에서 자산을 보관할 지갑/계좌를 생성합니다. (예: 주식계좌, 급여통장, ISA)
-2. **자금 이동 (입금)**: `💸 자금 이동` 폼에서 '외부에서 내 계좌로 입금'을 선택하여 초기 자본금을 설정합니다.
-3. **주식 매수**: `📈 주식 매수` 폼에서 매수할 종목과 수량, 결제될 계좌를 선택합니다. 매수 비용만큼 계좌 잔고가 차감됩니다.
-4. **내역 확인 및 시세 갱신**:
-   - 하단 상세 탭에서 거래 내역을 열람하거나, `주식 자산 실시간 상세 내역`에서 '시세' 버튼을 클릭해 현재가를 업데이트합니다.
-   - 수익률 및 평가액은 전체 대시보드 UI 및 차트에 즉시 자동 반영됩니다.
-5. **백업**: 사용이 끝나면 하단의 **[📥 자료백업]** 버튼을 눌러 자신의 로컬 디스크에 JSON 데이터를 다운로드하여 보관합니다.
+### 방법 A. Docker로 실행하기 (Synology NAS / 로컬 Docker 등)
+본 프로젝트는 Docker 환경에서 24시간 상시 가동할 수 있습니다. 특히 **Synology NAS의 Container Manager(Docker)** 등을 활용해 쉽게 배포할 수 있습니다.
 
-## 🛡️ 개인정보 보호 가이드
-* 본 애플리케이션은 네트워크를 통한 외부 통신(API 전송)을 일절 수행하지 않으므로 사용자의 데이터는 안전합니다.
-* 깃허브 등에 프로젝트를 클론/포크한 뒤 자신의 로컬에서 사용할 경우, 개인 데이터가 담긴 **`*.json` 백업 파일이 리포지토리에 푸쉬되지 않도록 주의**하세요 (이미 `.gitignore`에 등록되어 방지하고 있습니다).
+#### [방안 1] Docker CLI로 기동하기
+1. **도커 이미지 빌드**
+   ```bash
+   docker build -t stock-dashboard:latest .
+   ```
+2. **컨테이너 실행 (환경변수 주입)**
+   ```bash
+   docker run -d \
+     -p 3000:3000 \
+     -e TOSS_CLIENT_ID="발급받은_TOSS_CLIENT_ID" \
+     -e TOSS_CLIENT_SECRET="발급받은_TOSS_CLIENT_SECRET" \
+     --name stock-app \
+     stock-dashboard:latest
+   ```
+
+#### [방안 2] Synology NAS Container Manager GUI로 기동하기
+1. **레지스트리 다운로드**:
+   - Container Manager의 '레지스트리' 메뉴에서 `node`를 검색하여 최신 공식 이미지(예: `node:24-alpine`)를 다운로드합니다.
+2. **볼륨 매핑(Volume Mount)**:
+   - NAS의 프로젝트 폴더(예: `docker/stock`)를 컨테이너 내부의 `/app` 경로로 매핑(마운트)합니다.
+3. **포트 설정(Port Settings)**:
+   - 로컬 포트 `3000` -> 컨테이너 포트 `3000`으로 매핑합니다.
+4. **환경변수 추가(Environment)**:
+   - 컨테이너 설정 단계의 환경변수 목록에 아래 두 키 값을 직접 등록합니다.
+     * `TOSS_CLIENT_ID` : `발급받은_CLIENT_ID`
+     * `TOSS_CLIENT_SECRET` : `발급받은_CLIENT_SECRET`
+5. **실행 명령(Command) 설정**:
+   - 컨테이너 고급 설정의 **실행 명령(Command)** 칸에는 늘 사용하시던 방식 그대로 아래 명령어를 입력합니다:
+     ```bash
+     node /app/server.js
+     ```
+6. **실행**:
+   - 설정을 완료하고 컨테이너를 시작한 후 브라우저에서 `http://[NAS_IP]:3000`으로 접속하면 시세가 즉시 정상 작동합니다.
+
+---
+
+### 방법 B. 로컬 Node.js로 직접 실행하기
+Node.js(v18 이상, v24 권장)가 설치된 환경에서 수동으로 구동하는 방법입니다.
+
+1. **의존성 모듈 설치**
+   ```bash
+   npm install
+   ```
+2. **환경변수 설정 및 실행**
+   - **Windows PowerShell**:
+     ```powershell
+     $env:TOSS_CLIENT_ID="발급받은_TOSS_CLIENT_ID"
+     $env:TOSS_CLIENT_SECRET="발급받은_TOSS_CLIENT_SECRET"
+     node server.js
+     ```
+   - **Linux / macOS / Bash**:
+     ```bash
+     TOSS_CLIENT_ID="발급받은_TOSS_CLIENT_ID" TOSS_CLIENT_SECRET="발급받은_TOSS_CLIENT_SECRET" node server.js
+     ```
+3. **접속**
+   브라우저에서 `http://localhost:3000`으로 접속합니다.
+
+---
 
 ## 🛠 기술 스택
-* **Front-end**: HTML5, CSS3, Vanilla JavaScript (ES6+)
-* **Libraries**: [Chart.js](https://www.chartjs.org/) (CDN 로드)
-* **Storage**: Web LocalStorage API
+* **Front-end**: HTML5, CSS3, Vanilla JavaScript (ES6+), Chart.js
+* **Back-end**: Node.js 24, Express, Axios, Cheerio
+* **Database / Storage**: Web LocalStorage API (클라이언트 브라우저)
+
+---
+
+## 🛡️ 보안 및 프라이버시 주의사항
+* API Key 및 Secret Key는 절대로 Git 저장소 소스코드에 하드코딩하지 마십시오. 반드시 호스트(또는 도커 컨테이너) 환경변수(`TOSS_CLIENT_ID`, `TOSS_CLIENT_SECRET`)로 관리하십시오.
+* 개발 이력 및 에이전트 캐싱 파일(`.agent/docs/`) 등은 이미 `.gitignore`에 등록되어 GitHub 퍼블릭 저장소로 노출되는 것이 방지되고 있습니다.
