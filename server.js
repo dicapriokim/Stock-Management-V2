@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -73,6 +74,48 @@ async function fetchNaverPrice(symbol) {
     }
     return null;
 }
+
+// JSON 파일 DB 설정
+const DATA_DIR = path.join(__dirname, 'data');
+const DB_PATH = path.join(DATA_DIR, 'db.json');
+
+// 데이터 폴더 및 초기 파일 생성
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR);
+}
+if (!fs.existsSync(DB_PATH)) {
+    fs.writeFileSync(DB_PATH, JSON.stringify({ accounts: [], stocks: [], history: [] }, null, 2), 'utf8');
+}
+
+// GET /api/data - 데이터 로드
+app.get('/api/data', (req, res) => {
+    try {
+        const rawData = fs.readFileSync(DB_PATH, 'utf8');
+        res.json(JSON.parse(rawData));
+    } catch (e) {
+        console.error('[Database] Read failed:', e.message);
+        res.status(500).json({ error: 'Failed to read database file' });
+    }
+});
+
+// POST /api/data - 데이터 저장
+app.post('/api/data', (req, res) => {
+    try {
+        const { accounts, stocks, history } = req.body;
+        const dataToSave = {
+            accounts: accounts || [],
+            stocks: stocks || [],
+            history: history || [],
+            version: 'v4',
+            timestamp: new Date().toISOString()
+        };
+        fs.writeFileSync(DB_PATH, JSON.stringify(dataToSave, null, 2), 'utf8');
+        res.json({ success: true, message: 'Data saved successfully' });
+    } catch (e) {
+        console.error('[Database] Write failed:', e.message);
+        res.status(500).json({ error: 'Failed to write database file' });
+    }
+});
 
 // 다건 통합 시세 조회 엔드포인트
 app.get('/api/prices', async (req, res) => {

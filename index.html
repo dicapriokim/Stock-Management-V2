@@ -1265,7 +1265,7 @@
     
     <!-- 푸터 영역 -->
     <footer style="text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: 2rem;">
-        버전: v4.0 | 디자인 by 돼지지렁이
+        버전: v4.2.1 | 디자인 by 돼지지렁이
     </footer>
 
     <!-- 📉 주식 부분 매도 전용 모달 -->
@@ -1351,9 +1351,28 @@
         // accounts 구조: { id, name, category, balance }
         // stocks 구조: { id, name, investAmount, currentPrice, quantity, evaluationAmount, profitLoss, accountName, accountCategory }
         // =========================================================================
-        let accounts = JSON.parse(localStorage.getItem('dash_accounts_v3')) || [];
-        let stocks = JSON.parse(localStorage.getItem('dash_stocks_v3')) || [];
-        let transactionHistory = JSON.parse(localStorage.getItem('dash_history_v3')) || [];
+        let accounts = [];
+        let stocks = [];
+        let transactionHistory = [];
+
+        // 서버에서 데이터 불러오기
+        async function loadDataFromServer() {
+            try {
+                const response = await fetch('/api/data');
+                if (!response.ok) throw new Error('Failed to load data from server');
+                const data = await response.json();
+                accounts = data.accounts || [];
+                stocks = data.stocks || [];
+                transactionHistory = data.history || [];
+            } catch (e) {
+                console.error('[Server DB] Load error, fallback to localStorage:', e);
+                accounts = JSON.parse(localStorage.getItem('dash_accounts_v3')) || [];
+                stocks = JSON.parse(localStorage.getItem('dash_stocks_v3')) || [];
+                transactionHistory = JSON.parse(localStorage.getItem('dash_history_v3')) || [];
+            }
+            syncBalancesFromLedger();
+            renderAll();
+        }
 
         // [신규] 원장 기반 잔고 동기화 (단일 진실 공급원)
         function syncBalancesFromLedger() {
@@ -1406,13 +1425,31 @@
             }
         }
 
-        // 데이터 동기화 (0원 계좌 자동 삭제 포함)
-        function saveData() {
+        // 데이터 동기화 및 서버 저장
+        async function saveData() {
             syncBalancesFromLedger(); // 저장 전 무조건 원장 동기화 강제
-            // [수정] 데이터 자체는 삭제하지 않고 유지 (UI에서 필터링)
+            
+            // 1. 브라우저 로컬 스토리지에 백업용으로 남겨둠
             localStorage.setItem('dash_accounts_v3', JSON.stringify(accounts));
             localStorage.setItem('dash_stocks_v3', JSON.stringify(stocks));
             localStorage.setItem('dash_history_v3', JSON.stringify(transactionHistory));
+
+            // 2. 백엔드 JSON DB API로 전송
+            try {
+                await fetch('/api/data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        accounts: accounts,
+                        stocks: stocks,
+                        history: transactionHistory
+                    })
+                });
+            } catch (e) {
+                console.error('[Server DB] Save request failed:', e);
+            }
         }
 
         // DOM 요소 캐싱
@@ -3756,6 +3793,9 @@
         }
         window.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, 0);
+            
+            // 서버로부터 데이터 동적 획득 및 초기 렌더링
+            loadDataFromServer();
             
             // 혹시 모를 렌더링 지연에 대비해 한 번 더 호출
             setTimeout(() => { window.scrollTo(0, 0); }, 50);
