@@ -1265,7 +1265,7 @@
     
     <!-- 푸터 영역 -->
     <footer style="text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: 2rem;">
-        버전: v4.2.2 | 디자인 by 돼지지렁이
+        버전: v4.2.3 | 디자인 by 돼지지렁이
     </footer>
 
     <!-- 📉 주식 부분 매도 전용 모달 -->
@@ -3758,13 +3758,13 @@
                         stocks = data.stocks;
                         transactionHistory = data.history;
 
-                        // saveData는 0원 계좌 필터링 기능이 있으므로 복구할 때는 직접 저장
-                        localStorage.setItem('dash_accounts_v3', JSON.stringify(accounts));
-                        localStorage.setItem('dash_stocks_v3', JSON.stringify(stocks));
-                        localStorage.setItem('dash_history_v3', JSON.stringify(transactionHistory));
-
-                        alert('데이터 복구가 완료되었습니다.');
-                        location.reload();
+                        // saveData()를 호출하여 서버 DB(db.json)와 로컬스토리지를 동시에 최신 복구 데이터로 갱신
+                        saveData().then(() => {
+                            alert('데이터 복구가 완료되었습니다.');
+                            location.reload();
+                        }).catch(err => {
+                            alert('서버 저장 중 오류가 발생했습니다: ' + err.message);
+                        });
                     }
                 } catch (err) {
                     alert('복구 실패: ' + err.message);
@@ -3778,11 +3778,18 @@
         function resetAllData() {
             if (confirm('정말로 모든 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없으며, 모든 계좌와 주식 내역이 삭제됩니다.')) {
                 if (confirm('최종 확인: 정말로 초기화하시겠습니까?')) {
-                    localStorage.removeItem('dash_accounts_v3');
-                    localStorage.removeItem('dash_stocks_v3');
-                    localStorage.removeItem('dash_history_v3');
-                    alert('모든 데이터가 초기화되었습니다.');
-                    location.reload();
+                    // 데이터 비우기
+                    accounts = [];
+                    stocks = [];
+                    transactionHistory = [];
+                    
+                    // saveData()를 통해 서버 DB 및 로컬스토리지를 빈 상태로 동기화
+                    saveData().then(() => {
+                        alert('모든 데이터가 초기화되었습니다.');
+                        location.reload();
+                    }).catch(err => {
+                        alert('서버 초기화 중 오류가 발생했습니다: ' + err.message);
+                    });
                 }
             }
         }

@@ -1,5 +1,5 @@
 # 📈 통합 자산 관리 대시보드 (Personal Asset Management Dashboard)
-> **현재 릴리즈 버전**: `v4.2.1`
+> **현재 릴리즈 버전**: `v4.2.3`
 
 ## 📌 프로젝트 개요
 HTML, CSS, Vanilla JavaScript로 작성된 프론트엔드 대시보드와 이를 지원하는 **Node.js Express 백엔드 API 서버**로 구성된 자산 관리 애플리케이션입니다.
