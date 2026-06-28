@@ -1045,18 +1045,17 @@
     <div class="grid">
         <!-- 계좌 현황 테이블 (항상 표시) -->
         <div class="card col-12">
-            <div class="card-title">계좌별 투자 성과 분석 (현금흐름 기반)</div>
+            <div class="card-title">계좌별 투자금 및 자산 배분 현황</div>
             <div class="table-area">
                 <table>
                     <thead>
                         <tr>
-                            <th style="width: 12%;">계좌 성격</th>
-                            <th style="width: 14%;">계좌 이름</th>
-                            <th class="text-right" style="width: 16%;">누적 순입금 (원금)</th>
-                            <th class="text-right" style="width: 16%;">현재 총자산</th>
-                            <th class="text-right" style="width: 14%;">실제 순수익금</th>
-                            <th class="text-right" style="width: 14%;">순수익률</th>
-                            <th class="text-center" style="width: 14%;">관리</th>
+                            <th style="width: 14%;">계좌 성격</th>
+                            <th style="width: 18%;">계좌 이름</th>
+                            <th class="text-right" style="width: 17%;">누적 투입금 (총알)</th>
+                            <th class="text-right" style="width: 17%;">계좌 내 현금</th>
+                            <th class="text-right" style="width: 17%;">주식 평가액</th>
+                            <th class="text-right" style="width: 17%;">현재 총자산</th>
                         </tr>
                     </thead>
                     <tbody id="acc-table-body">
@@ -1265,7 +1264,7 @@
     
     <!-- 푸터 영역 -->
     <footer style="text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: 2rem;">
-        버전: v4.2.5 | 디자인 by 돼지지렁이
+        버전: v4.3.0 | 디자인 by 돼지지렁이
     </footer>
 
     <!-- 📉 주식 부분 매도 전용 모달 -->
@@ -3022,7 +3021,7 @@
             const netMap = calcNetDeposits(); // 순입금 계산
 
             if (visibleAccounts.length === 0) {
-                accTbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:1.5rem;">잔고가 있는 관리 계좌가 없습니다.</td></tr>`;
+                accTbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted" style="padding:1.5rem;">잔고가 있는 관리 계좌가 없습니다.</td></tr>`;
             } else {
                 // [변경] 잔고가 0보다 큰 계좌만 화면(표)에 표시 (단, 데이터는 유지됨)
                 visibleAccounts.forEach(acc => {
@@ -3034,22 +3033,15 @@
                     const currentTotalAsset = acc.balance + totalEval;
                     // 누적 순입금(원금)
                     const netDeposit = netMap[acc.id] || 0;
-                    // 실제 순수익금 = 현재 총자산 - 누적 순입금
-                    const netProfit = currentTotalAsset - netDeposit;
-                    // 순수익률 (분모 0 방지)
-                    const netProfitRate = netDeposit !== 0 ? ((netProfit / Math.abs(netDeposit)) * 100) : 0;
 
                     let tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${getCatTag(acc.category)}</td>
                         <td class="font-bold">${acc.name}</td>
                         <td class="text-right font-bold cash-text">${fmt(netDeposit)}</td>
+                        <td class="text-right font-bold text-muted">${fmt(acc.balance)}</td>
+                        <td class="text-right font-bold text-accent" style="color:var(--accent);">${fmt(totalEval)}</td>
                         <td class="text-right font-bold">${fmt(currentTotalAsset)}</td>
-                        <td class="text-right font-bold ${col(netProfit)}">${sign(netProfit)}${fmt(netProfit)}</td>
-                        <td class="text-right font-bold ${col(netProfitRate)}">
-                            ${netDeposit !== 0 ? `${sign(netProfitRate)}${netProfitRate.toFixed(2)}%` : '<span style="color:var(--text-muted); font-weight:normal;">-</span>'}
-                        </td>
-                        <td class="text-center"><span style="color:var(--text-muted); font-size:0.8rem;">잔고 0원 시 숨김 처리</span></td>
                     `;
                     accTbody.appendChild(tr);
                 });
