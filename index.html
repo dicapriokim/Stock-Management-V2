@@ -270,6 +270,10 @@
             color: var(--cash) !important;
         }
 
+        .dividend-text {
+            color: #a78bfa !important;
+        }
+
         .font-bold {
             font-weight: 600;
         }
@@ -867,6 +871,7 @@
                         <option value="deposit">외부에서 내 계좌로 입금 (+)</option>
                         <option value="withdraw">내 계좌에서 외부로 출금 (-)</option>
                         <option value="transfer">내 계좌 간 이체 (->)</option>
+                        <option value="dividend">배당금 및 이자 수입 (+)</option>
                     </select>
                 </div>
 
@@ -901,12 +906,21 @@
 
         <!-- 주식 자산 매수 폼 (현금 연동) -->
         <div class="card col-4">
-            <div class="card-title">📈 주식 매수 (결제계좌 차감)</div>
+            <div class="card-title">📈 주식/펀드 매수 (결제계좌 차감)</div>
             <form id="stock-form" class="input-form">
                 <div class="input-group" style="flex: 0 0 100%; width: 100%;">
                     <label for="stock-name">매수 종목명</label>
                     <input type="text" id="stock-name" placeholder="예: 삼성전자 (005930)" list="stock-list" required />
                     <datalist id="stock-list"></datalist>
+                </div>
+                <!-- 💡 자산 분류 수동 지정 라디오 버튼 그룹 (공간 절약을 위해 라벨 텍스트 생략) -->
+                <div class="input-group" style="width: 100%; display: flex; flex-direction: row; align-items: center; gap: 2rem; margin-top: 0.5rem; margin-bottom: 0.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.4rem; font-weight: normal; cursor: pointer; margin-bottom: 0; color: var(--text); white-space: nowrap;">
+                        <input type="radio" name="stock-asset-type" value="stock" checked onchange="handleAssetTypeChange()" style="cursor: pointer;" /> 주식
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.4rem; font-weight: normal; cursor: pointer; margin-bottom: 0; color: var(--text); white-space: nowrap;">
+                        <input type="radio" name="stock-asset-type" value="fund" onchange="handleAssetTypeChange()" style="cursor: pointer;" /> 펀드/TDF
+                    </label>
                 </div>
                 <!-- 💡 신규 기능: 종목코드 (6자리 숫자) 추출 필드 -->
                 <div class="input-group" style="width: 100%;">
@@ -945,7 +959,7 @@
                         <!-- JS 실시간 렌더링 (카테고리/잔고 표시) -->
                     </select>
                 </div>
-                <button type="submit" class="submit-btn" style="background-color: var(--accent); margin-top: auto;">주식
+                <button type="submit" class="submit-btn" style="background-color: var(--accent); margin-top: auto;">자산
                     연동 매수</button>
             </form>
         </div>
@@ -1127,7 +1141,7 @@
                                     <select id="filter-stock-acc" onchange="applyFilters()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance:none; appearance:none;">
                                     </select>
                                 </th>
-                                <th style="width: 15%; position: relative;">
+                                <th style="width: 14%; position: relative;">
                                     <div style="display: flex; justify-content: flex-start; gap: 4px; align-items: center; width: 100%;">
                                         <span id="label-stock-name">매수 종목명</span>
                                         <span id="indicator-stock-name" style="color: var(--accent); display: none;">✔️</span>
@@ -1135,13 +1149,14 @@
                                     <select id="filter-stock-name" onchange="applyFilters()" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; -webkit-appearance:none; appearance:none;">
                                     </select>
                                 </th>
-                                <th class="text-right" style="width: 10%;">현재 시세</th>
-                                <th class="text-right" style="width: 9%;">보유 수량</th>
-                                <th class="text-right" style="width: 11%;">투자 원금</th>
-                                <th class="text-right" style="width: 11%;">평가 금액</th>
-                                <th class="text-right" style="width: 11%;">손익금</th>
-                                <th class="text-right" style="width: 9%;">수익률</th>
-                                <th class="text-center" style="width: 12%;">관리</th>
+                                <th class="text-right" style="width: 9%;">매수 평단가</th>
+                                <th class="text-right" style="width: 9%;">현재 시세</th>
+                                <th class="text-right" style="width: 8%;">보유 수량</th>
+                                <th class="text-right" style="width: 10%;">투자 원금</th>
+                                <th class="text-right" style="width: 10%;">평가 금액</th>
+                                <th class="text-right" style="width: 10%;">손익금</th>
+                                <th class="text-right" style="width: 8%;">수익률</th>
+                                <th class="text-center" style="width: 10%;">관리</th>
                             </tr>
                         </thead>
                         <tbody id="stock-table-body-detail">
@@ -1264,7 +1279,7 @@
     
     <!-- 푸터 영역 -->
     <footer style="text-align: center; padding: 1.5rem; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: 2rem;">
-        버전: v4.3.0 | 디자인 by 돼지지렁이
+        버전: v4.8.1 | 디자인 by 돼지지렁이
     </footer>
 
     <!-- 📉 주식 부분 매도 전용 모달 -->
@@ -1389,25 +1404,28 @@
                     const amount = Number(h.amount) || 0;
 
                     if (txType === TX_TYPE.EXTERNAL_IN && h.toAccId) {
-                        let acc = accounts.find(a => a && a.id === h.toAccId);
+                        let acc = accounts.find(a => a && a.id === Number(h.toAccId));
                         if (acc) acc.balance += amount;
                     } else if (txType === TX_TYPE.EXTERNAL_OUT && h.fromAccId) {
-                        let acc = accounts.find(a => a && a.id === h.fromAccId);
+                        let acc = accounts.find(a => a && a.id === Number(h.fromAccId));
                         if (acc) acc.balance -= amount;
                     } else if (txType === TX_TYPE.INTERNAL_TRANSFER) {
                         if (h.fromAccId) {
-                            let fromAcc = accounts.find(a => a && a.id === h.fromAccId);
+                            let fromAcc = accounts.find(a => a && a.id === Number(h.fromAccId));
                             if (fromAcc) fromAcc.balance -= amount;
                         }
                         if (h.toAccId) {
-                            let toAcc = accounts.find(a => a && a.id === h.toAccId);
+                            let toAcc = accounts.find(a => a && a.id === Number(h.toAccId));
                             if (toAcc) toAcc.balance += amount;
                         }
                     } else if (txType === TX_TYPE.STOCK_BUY && h.fromAccId) {
-                        let acc = accounts.find(a => a && a.id === h.fromAccId);
+                        let acc = accounts.find(a => a && a.id === Number(h.fromAccId));
                         if (acc) acc.balance -= amount;
                     } else if (txType === TX_TYPE.STOCK_SELL && h.toAccId) {
-                        let acc = accounts.find(a => a && a.id === h.toAccId);
+                        let acc = accounts.find(a => a && a.id === Number(h.toAccId));
+                        if (acc) acc.balance += amount;
+                    } else if (txType === TX_TYPE.DIVIDEND_INTEREST && h.toAccId) {
+                        let acc = accounts.find(a => a && a.id === Number(h.toAccId));
                         if (acc) acc.balance += amount;
                     }
                 });
@@ -1473,7 +1491,8 @@
             EXTERNAL_OUT: 'EXTERNAL_OUT',       // 내 계좌 → 외부 출금
             INTERNAL_TRANSFER: 'INTERNAL_TRANSFER', // 내 계좌 간 이체
             STOCK_BUY: 'STOCK_BUY',             // 주식 매수
-            STOCK_SELL: 'STOCK_SELL'             // 주식 매도
+            STOCK_SELL: 'STOCK_SELL',            // 주식 매도
+            DIVIDEND_INTEREST: 'DIVIDEND_INTEREST' // 배당금 및 이자 수입 (투자금 제외)
         });
 
         // [1-TX-F] 과거 데이터 호환 Fallback 헬퍼 (type 필드 없는 v3.7 이전 데이터 대응)
@@ -1529,7 +1548,8 @@
                         break;
                     case TX_TYPE.STOCK_BUY:
                     case TX_TYPE.STOCK_SELL:
-                        // 자산 이동이므로 순입금 변화 없음
+                    case TX_TYPE.DIVIDEND_INTEREST:
+                        // 자산 이동 또는 자산 창출 수입(배당/이자)이므로 누적 투입금(총알) 변화 없음
                         break;
                     default:
                         // 분류 불가 → 기존 하드코딩 Fallback
@@ -1571,7 +1591,8 @@
                         break;
                     case TX_TYPE.STOCK_BUY:
                     case TX_TYPE.STOCK_SELL:
-                        // 자산 이동: 순입금 변화 없음
+                    case TX_TYPE.DIVIDEND_INTEREST:
+                        // 자산 이동 또는 자산 창출 수입: 순입금 변화 없음
                         break;
                 }
                 dailyMap[d].deposit = cumDeposit;
@@ -1639,6 +1660,10 @@
                 } else if (txType === TX_TYPE.STOCK_SELL && h.toAccId) {
                     if (balances[h.toAccId] === undefined) balances[h.toAccId] = 0;
                     balances[h.toAccId] += amount;
+                } else if (txType === TX_TYPE.DIVIDEND_INTEREST && h.toAccId) {
+                    // 배당금/이자 수입: 수령 계좌 잔액 증가
+                    if (balances[h.toAccId] === undefined) balances[h.toAccId] = 0;
+                    balances[h.toAccId] += amount;
                 }
 
                 historyBalancesMap[h.id] = { ...balances };
@@ -1685,7 +1710,7 @@
             const fromLabel = document.getElementById('tf-from-label');
             const toLabel = document.getElementById('tf-to-label');
 
-            if (type === 'deposit') {
+            if (type === 'deposit' || type === 'dividend') {
                 // 이미지 방식 (Step 1230): 1줄 3개, 2줄 1개
                 // 3열 배치 시 좁은 화면 줄바꿈 방지를 위해 min-width를 축소 (100px)
                 setField(dateGrp, true, 'calc(33.33% - 12px)', '100px');
@@ -1698,7 +1723,7 @@
                 fromSelect.required = false;
                 toSelect.required = true;
                 destInput.required = false;
-                toLabel.innerText = '입금받을 내 계좌';
+                toLabel.innerText = type === 'dividend' ? '배당/이자 수령 계좌' : '입금받을 내 계좌';
             } else if (type === 'withdraw') {
                 // 이미지 방식 기반 (Step 1230): 1줄 3개, 2줄 2개
                 setField(dateGrp, true, 'calc(33.33% - 12px)', '100px');
@@ -1791,6 +1816,19 @@
         const col = (n) => n > 0 ? 'profit-text' : (n < 0 ? 'loss-text' : '');
         const sign = (n) => n > 0 ? '+' : '';
 
+        // [신규] 펀드/TDF 여부에 따른 자산 평가금 및 손익 재계산 공통 헬퍼
+        function recalculateStockAmounts(stock) {
+            if (!stock) return;
+            // 명시적인 isFund 필드가 있으면 사용하고, 없으면 정규식으로 감지
+            const isFund = stock.isFund !== undefined ? stock.isFund : /tdf|펀드|c-re|c-p|혼합자산|증권자/i.test(stock.name);
+            if (isFund) {
+                stock.evaluationAmount = stock.currentPrice;
+            } else {
+                stock.evaluationAmount = stock.quantity * stock.currentPrice;
+            }
+            stock.profitLoss = stock.evaluationAmount - stock.investAmount;
+        }
+
         // UI에 카테고리 별로 다른 테마 색상을 부여하는 뱃지 렌더링 함수
         function getCatTag(cat) {
             if (!cat) return `<span class="tag tag-default">미분류 기타</span>`;
@@ -1811,6 +1849,52 @@
             });
             const commission = document.getElementById('commission');
             if (commission) commission.value = '0';
+
+            const qtyInput = document.getElementById('quantity');
+            if (qtyInput) {
+                qtyInput.readOnly = false;
+                qtyInput.style.backgroundColor = "";
+                qtyInput.style.cursor = "";
+            }
+            const qtyLabel = document.querySelector("label[for='quantity']");
+            if (qtyLabel) qtyLabel.innerText = '매수 수량';
+            const priceLabel = document.querySelector("label[for='buy-price']");
+            if (priceLabel) priceLabel.innerText = '매수 평단가 (원)';
+
+            const defaultRadio = document.querySelector('input[name="stock-asset-type"][value="stock"]');
+            if (defaultRadio) {
+                defaultRadio.checked = true;
+            }
+        }
+
+        // 💡 자산 분류 선택에 따른 입력 제한 및 라벨 가이드 처리 함수
+        function handleAssetTypeChange() {
+            const selectedRadio = document.querySelector('input[name="stock-asset-type"]:checked');
+            const assetType = selectedRadio ? selectedRadio.value : 'stock';
+            const qtyInput = document.getElementById('quantity');
+            const commInput = document.getElementById('commission');
+
+            if (qtyInput && commInput) {
+                if (assetType === 'fund') {
+                    qtyInput.value = "1";
+                    qtyInput.readOnly = true;
+                    qtyInput.style.backgroundColor = "rgba(15, 23, 42, 0.8)";
+                    qtyInput.style.cursor = "not-allowed";
+                    commInput.value = "0";
+
+                    document.querySelector("label[for='quantity']").innerHTML = '보유 수량 <span style="color:var(--accent); font-weight:bold;">(펀드 자동 고정)</span>';
+                    document.querySelector("label[for='buy-price']").innerHTML = '매수 평단가 <span style="color:var(--accent); font-weight:bold;">(총 투자액)</span>';
+
+                    updateAutoInvestment();
+                } else {
+                    qtyInput.readOnly = false;
+                    qtyInput.style.backgroundColor = "";
+                    qtyInput.style.cursor = "";
+
+                    document.querySelector("label[for='quantity']").innerText = '매수 수량';
+                    document.querySelector("label[for='buy-price']").innerText = '매수 평단가 (원)';
+                }
+            }
         }
 
         initDateInputs();
@@ -1871,7 +1955,14 @@
             let quantity = unformatNumber(document.getElementById('quantity').value);
             let commission = unformatNumber(document.getElementById('commission').value);
 
-            let evaluationAmount = currentPrice * quantity;
+            const selectedRadio = document.querySelector('input[name="stock-asset-type"]:checked');
+            const isFund = selectedRadio ? selectedRadio.value === 'fund' : false;
+            let evaluationAmount = 0;
+            if (isFund) {
+                evaluationAmount = currentPrice;
+            } else {
+                evaluationAmount = currentPrice * quantity;
+            }
             let profitLoss = evaluationAmount - investAmount;
 
             let ticker = document.getElementById('stock-ticker').value.trim();
@@ -1887,9 +1978,9 @@
                 // 가장 최신 입력된 시세 및 티커로 종목 업데이트
                 existingStock.currentPrice = currentPrice;
                 existingStock.ticker = ticker || existingStock.ticker;
+                existingStock.isFund = isFund; // 명시적 자산 분류 갱신
                 // 평가금 및 손익금 재계산
-                existingStock.evaluationAmount = existingStock.quantity * existingStock.currentPrice;
-                existingStock.profitLoss = existingStock.evaluationAmount - existingStock.investAmount;
+                recalculateStockAmounts(existingStock);
                 existingStock.commission = (existingStock.commission || 0) + commission;
                 // 마지막 매수 계좌 정보로 갱신 (선택 사항)
                 existingStock.accountName = selectedAccount.name;
@@ -1908,7 +1999,8 @@
                     profitLoss: profitLoss,
                     commission: commission,
                     accountName: selectedAccount.name,
-                    accountCategory: selectedAccount.category
+                    accountCategory: selectedAccount.category,
+                    isFund: isFund // 명시적 자산 분류 저장
                 });
             }
 
@@ -1930,7 +2022,8 @@
                 commission: commission,
                 isStockPurchase: true,
                 stockName: name,
-                quantity: quantity
+                quantity: quantity,
+                isFund: isFund // 메타데이터 저장
             });
 
             currentHistoryPage = 1; // [추가] 신규 거래 시 1페이지 리셋
@@ -2019,6 +2112,22 @@
                         toAccCategory: toAcc.category,
                         amount: amount
                     });
+                } else if (type === 'dividend') {
+                    let toId = Number(document.getElementById('transfer-to').value);
+                    let toAcc = accounts.find(a => a.id === toId);
+                    if (!toAcc) return alert('입금받을 계좌를 선택해주세요.');
+
+                    toAcc.balance += amount;
+                    transactionHistory.push({
+                        id: Date.now(),
+                        date: dateString,
+                        type: TX_TYPE.DIVIDEND_INTEREST,
+                        from: '배당금 및 이자',
+                        to: toAcc.name,
+                        toAccId: toAcc.id,
+                        toAccCategory: toAcc.category,
+                        amount: amount
+                    });
                 }
 
                 currentHistoryPage = 1; // [추가] 신규 거래 시 1페이지 리셋
@@ -2055,15 +2164,15 @@
             const txType = getHistoryType(item);
             
             // A. 자금 이동 내역
-            if (txType === TX_TYPE.EXTERNAL_IN || txType === TX_TYPE.EXTERNAL_OUT || txType === TX_TYPE.INTERNAL_TRANSFER) {
+            if (txType === TX_TYPE.EXTERNAL_IN || txType === TX_TYPE.EXTERNAL_OUT || txType === TX_TYPE.INTERNAL_TRANSFER || txType === TX_TYPE.DIVIDEND_INTEREST) {
                 const historyTypeFilter = document.getElementById('filter-history-type')?.value || '';
                 const historyFromFilter = document.getElementById('filter-history-from')?.value || '';
                 const historyToFilter = document.getElementById('filter-history-to')?.value || '';
 
                 const cashHistory = transactionHistory.filter(h => {
                     const t = getHistoryType(h);
-                    if (t !== TX_TYPE.EXTERNAL_IN && t !== TX_TYPE.EXTERNAL_OUT && t !== TX_TYPE.INTERNAL_TRANSFER) return false;
-                    let typeText = t === TX_TYPE.EXTERNAL_IN ? '입금' : (t === TX_TYPE.EXTERNAL_OUT ? '출금' : '이체');
+                    if (t !== TX_TYPE.EXTERNAL_IN && t !== TX_TYPE.EXTERNAL_OUT && t !== TX_TYPE.INTERNAL_TRANSFER && t !== TX_TYPE.DIVIDEND_INTEREST) return false;
+                    let typeText = t === TX_TYPE.EXTERNAL_IN ? '입금' : (t === TX_TYPE.EXTERNAL_OUT ? '출금' : (t === TX_TYPE.DIVIDEND_INTEREST ? '배당' : '이체'));
                     const typeMatch = historyTypeFilter ? typeText === historyTypeFilter : true;
                     const fromMatch = historyFromFilter ? h.from === historyFromFilter : true;
                     const toMatch = historyToFilter ? h.to === historyToFilter : true;
@@ -2219,6 +2328,16 @@
                     document.getElementById('stock-name').value = stockName;
                     document.getElementById('payment-account').value = item.fromAccId || "";
                     document.getElementById('stock-date').value = item.date;
+
+                    // 💡 자산 분류 복원
+                    const isFund = item.isFund !== undefined ? item.isFund : /tdf|펀드|c-re|c-p|혼합자산|증권자/i.test(stockName);
+                    const targetVal = isFund ? 'fund' : 'stock';
+                    const radio = document.querySelector(`input[name="stock-asset-type"][value="${targetVal}"]`);
+                    if (radio) {
+                        radio.checked = true;
+                    }
+                    handleAssetTypeChange();
+
                     // 금액 및 소요 데이터 복구
                     document.getElementById('quantity').value = formatNumberWithCommas(item.quantity || 0);
                     document.getElementById('invest-amount').value = formatNumberWithCommas(item.amount || 0);
@@ -2232,7 +2351,7 @@
                     switchMainTab('detail');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
-                    // 일반 이체/입출금
+                    // 일반 이체/입출금/배당
                     const typeSelect = document.getElementById('transfer-type');
                     if (txType === TX_TYPE.EXTERNAL_IN) {
                         typeSelect.value = 'deposit';
@@ -2243,6 +2362,9 @@
                     } else if (txType === TX_TYPE.INTERNAL_TRANSFER) {
                         typeSelect.value = 'transfer';
                         document.getElementById('transfer-from').value = item.fromAccId;
+                        document.getElementById('transfer-to').value = item.toAccId;
+                    } else if (txType === TX_TYPE.DIVIDEND_INTEREST) {
+                        typeSelect.value = 'dividend';
                         document.getElementById('transfer-to').value = item.toAccId;
                     }
                     toggleTransferFields();
@@ -2280,6 +2402,15 @@
             const code = extractTicker(nameValue);
             if (code && (!tickerInput.value || tickerInput.value.length < 6)) {
                 tickerInput.value = code;
+            }
+
+            // 펀드/TDF 감지 시 자산 분류 자동 변환
+            const isFund = /tdf|펀드|c-re|c-p|혼합자산|증권자/i.test(nameValue);
+            const targetVal = isFund ? 'fund' : 'stock';
+            const radio = document.querySelector(`input[name="stock-asset-type"][value="${targetVal}"]`);
+            if (radio) {
+                radio.checked = true;
+                handleAssetTypeChange();
             }
         });
 
@@ -2338,8 +2469,7 @@
                         const price = data.results[item.code];
                         if (price !== undefined && price !== null) {
                             item.stock.currentPrice = price;
-                            item.stock.evaluationAmount = item.stock.currentPrice * item.stock.quantity;
-                            item.stock.profitLoss = item.stock.evaluationAmount - item.stock.investAmount;
+                            recalculateStockAmounts(item.stock);
                             successCount++;
                         } else {
                             failItems.push(item.stock.name);
@@ -2371,6 +2501,25 @@
             const stock = stocks.find(s => s.id === id);
             if (!stock) return;
 
+            // 💡 펀드/TDF 상품일 경우 시세 버튼 클릭 시 현재 평가액을 수동 입력하도록 간소화
+            const isFund = stock.isFund !== undefined ? stock.isFund : /tdf|펀드|c-re|c-p|혼합자산|증권자/i.test(stock.name);
+            if (isFund) {
+                const manualVal = prompt(`[${stock.name}]의 현재 총 평가금액을 입력해 주세요. (숫자만 입력)`, stock.currentPrice);
+                if (manualVal !== null) {
+                    const price = Number(manualVal.replace(/[^0-9]/g, ''));
+                    if (!isNaN(price) && price >= 0) {
+                        stock.currentPrice = price;
+                        recalculateStockAmounts(stock);
+                        saveData();
+                        renderAll();
+                        alert(`[${stock.name}]의 평가금액이 ${price.toLocaleString()}원으로 최신화되었습니다.`);
+                    } else {
+                        alert('올바른 숫자를 입력해 주세요.');
+                    }
+                }
+                return;
+            }
+
             let code = stock.ticker;
             if (!code || !/^[A-Za-z0-9]{6}$/.test(code.trim())) {
                 const extracted = extractTicker(stock.name);
@@ -2396,8 +2545,7 @@
                 if (data && data.success && data.results && data.results[code.trim()]) {
                     const price = data.results[code.trim()];
                     stock.currentPrice = price;
-                    stock.evaluationAmount = stock.currentPrice * stock.quantity;
-                    stock.profitLoss = stock.evaluationAmount - stock.investAmount;
+                    recalculateStockAmounts(stock);
                     saveData();
                     renderAll();
                     alert(`[${stock.name}] 시세가 갱신되었습니다. (출처: ${data.source === 'toss' ? '토스 API' : '네이버 금융'})`);
@@ -2443,6 +2591,12 @@
             // 2. 폼 복구
             document.getElementById('stock-name').value = stock.name;
             document.getElementById('stock-ticker').value = stock.ticker || "";
+            const targetVal = stock.isFund ? 'fund' : 'stock';
+            const radio = document.querySelector(`input[name="stock-asset-type"][value="${targetVal}"]`);
+            if (radio) {
+                radio.checked = true;
+            }
+            handleAssetTypeChange();
             document.getElementById('quantity').value = formatNumberWithCommas(stock.quantity);
             document.getElementById('buy-price').value = formatNumberWithCommas(stock.buyPrice || (stock.investAmount / stock.quantity));
             document.getElementById('current-price').value = formatNumberWithCommas(stock.currentPrice);
@@ -2576,8 +2730,7 @@
                 stock.quantity -= sellQty;
                 stock.investAmount -= costReduction;
                 // 평가액 및 손익 재계산
-                stock.evaluationAmount = stock.quantity * stock.currentPrice;
-                stock.profitLoss = stock.evaluationAmount - stock.investAmount;
+                recalculateStockAmounts(stock);
             }
 
             currentHistoryPage = 1; // [추가] 신규 거래 시 1페이지로 리셋
@@ -2638,7 +2791,73 @@
         // =========================================================================
         // [4] 전체 UI 제어 컨트롤러
         // =========================================================================
+        // =========================================================================
+        // [잔고 무결성 검증] 거래 기록(Single Source of Truth)과 acc.balance 정합성 보정
+        // calcHistoricalBalances()와 동일 로직으로 0원부터 재연산한 최종 잔고가
+        // acc.balance와 다르면 거래 기록 기준으로 자동 보정 후 저장
+        // =========================================================================
+        function reconcileBalances() {
+            const balances = {};
+            accounts.forEach(a => { if (a) balances[a.id] = 0; });
+
+            // 모든 거래를 날짜+ID 순으로 재연산
+            const sorted = [...transactionHistory].sort((a, b) => {
+                if (a.date !== b.date) return a.date.localeCompare(b.date);
+                return a.id - b.id;
+            });
+
+            sorted.forEach(h => {
+                const txType = getHistoryType(h);
+                const amount = Number(h.amount) || 0;
+
+                if (txType === TX_TYPE.EXTERNAL_IN && h.toAccId) {
+                    if (balances[h.toAccId] === undefined) balances[h.toAccId] = 0;
+                    balances[h.toAccId] += amount;
+                } else if (txType === TX_TYPE.EXTERNAL_OUT && h.fromAccId) {
+                    if (balances[h.fromAccId] === undefined) balances[h.fromAccId] = 0;
+                    balances[h.fromAccId] -= amount;
+                } else if (txType === TX_TYPE.INTERNAL_TRANSFER) {
+                    if (h.fromAccId) {
+                        if (balances[h.fromAccId] === undefined) balances[h.fromAccId] = 0;
+                        balances[h.fromAccId] -= amount;
+                    }
+                    if (h.toAccId) {
+                        if (balances[h.toAccId] === undefined) balances[h.toAccId] = 0;
+                        balances[h.toAccId] += amount;
+                    }
+                } else if (txType === TX_TYPE.STOCK_BUY && h.fromAccId) {
+                    if (balances[h.fromAccId] === undefined) balances[h.fromAccId] = 0;
+                    balances[h.fromAccId] -= amount;
+                } else if (txType === TX_TYPE.STOCK_SELL && h.toAccId) {
+                    if (balances[h.toAccId] === undefined) balances[h.toAccId] = 0;
+                    balances[h.toAccId] += amount;
+                } else if (txType === TX_TYPE.DIVIDEND_INTEREST && h.toAccId) {
+                    if (balances[h.toAccId] === undefined) balances[h.toAccId] = 0;
+                    balances[h.toAccId] += amount;
+                }
+            });
+
+            // 보정 수행
+            let corrected = false;
+            accounts.forEach(acc => {
+                if (!acc) return;
+                const expected = balances[acc.id] || 0;
+                if (Math.round(acc.balance) !== Math.round(expected)) {
+                    console.warn(`[잔고 보정] ${acc.name} (${acc.category}): ${acc.balance.toLocaleString()}원 → ${expected.toLocaleString()}원 (차이: ${(acc.balance - expected).toLocaleString()}원)`);
+                    acc.balance = expected;
+                    corrected = true;
+                }
+            });
+
+            if (corrected) {
+                saveData();
+                console.log('[잔고 보정] 거래 기록 기반 잔고 재계산 완료 및 자동 저장됨.');
+            }
+        }
+
         function renderAll() {
+            stocks.forEach(recalculateStockAmounts); // 펀드/TDF 상품 평가액 연산 보정
+            reconcileBalances(); // 거래 기록 기반 잔고 무결성 검증
             renderPaymentDropdown();
             renderSummary();
             renderTables();
@@ -2710,9 +2929,9 @@
             const historyToFilter = document.getElementById('filter-history-to')?.value || '';
             const cashHistory = transactionHistory.filter(h => {
                 const txType = getHistoryType(h);
-                if (txType !== TX_TYPE.EXTERNAL_IN && txType !== TX_TYPE.EXTERNAL_OUT && txType !== TX_TYPE.INTERNAL_TRANSFER) return false;
+                if (txType !== TX_TYPE.EXTERNAL_IN && txType !== TX_TYPE.EXTERNAL_OUT && txType !== TX_TYPE.INTERNAL_TRANSFER && txType !== TX_TYPE.DIVIDEND_INTEREST) return false;
                 
-                let typeText = txType === TX_TYPE.EXTERNAL_IN ? '입금' : (txType === TX_TYPE.EXTERNAL_OUT ? '출금' : '이체');
+                let typeText = txType === TX_TYPE.EXTERNAL_IN ? '입금' : (txType === TX_TYPE.EXTERNAL_OUT ? '출금' : (txType === TX_TYPE.DIVIDEND_INTEREST ? '배당' : '이체'));
                 const typeMatch = historyTypeFilter ? typeText === historyTypeFilter : true;
                 const fromMatch = historyFromFilter ? h.from === historyFromFilter : true;
                 const toMatch = historyToFilter ? h.to === historyToFilter : true;
@@ -2937,7 +3156,7 @@
 
             const cashHistory = transactionHistory.filter(h => {
                 const txType = getHistoryType(h);
-                return txType === TX_TYPE.EXTERNAL_IN || txType === TX_TYPE.EXTERNAL_OUT || txType === TX_TYPE.INTERNAL_TRANSFER;
+                return txType === TX_TYPE.EXTERNAL_IN || txType === TX_TYPE.EXTERNAL_OUT || txType === TX_TYPE.INTERNAL_TRANSFER || txType === TX_TYPE.DIVIDEND_INTEREST;
             });
             const cashFroms = [...new Set(cashHistory.map(h => h.from).filter(Boolean))].sort();
             const cashTos = [...new Set(cashHistory.map(h => h.to).filter(Boolean))].sort();
@@ -2995,7 +3214,7 @@
 
             updateSelect('filter-stock-acc', stockAccs);
             updateSelect('filter-stock-name', stockNames);
-            updateSelect('filter-history-type', ['입금', '출금', '이체']);
+            updateSelect('filter-history-type', ['입금', '출금', '이체', '배당']);
             updateSelect('filter-history-from', cashFroms);
             updateSelect('filter-history-to', cashTos);
             updateSelect('filter-trade-type', ['매수', '매도']);
@@ -3016,8 +3235,13 @@
         function renderTables() {
             updateFilterDropdowns(); // 렌더링 전 필터 목록 최신화
             accTbody.innerHTML = '';
-            // 이중 방어 코드: 객체가 존재하고 isActive가 false가 아닌 경우만 렌더링
-            const visibleAccounts = accounts.filter(acc => acc && acc.isActive !== false && acc.balance > 0);
+            // 이중 방어 코드: 객체가 존재하고 isActive가 false가 아닌 활성 계좌 중 현금 잔고가 있거나 주식 평가액이 존재하는 계좌 노출
+            const visibleAccounts = accounts.filter(acc => {
+                if (!acc || acc.isActive === false) return false;
+                const accStocks = stocks.filter(s => s.accountName === acc.name && s.accountCategory === acc.category);
+                const totalEval = accStocks.reduce((sum, s) => sum + s.evaluationAmount, 0);
+                return (acc.balance > 0 || totalEval > 0);
+            });
             const netMap = calcNetDeposits(); // 순입금 계산
 
             if (visibleAccounts.length === 0) {
@@ -3086,6 +3310,10 @@
                         `<div>${getCatTag(stock.accountCategory)}</div><div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${stock.accountName} 결제됨</div>` :
                         `<span style="color:var(--text-muted); font-size:0.8rem;">미지정</span>`;
 
+                    // 💡 주식 상품에 대한 평단가 추출 (펀드는 제외 처리)
+                    const isFund = stock.isFund !== undefined ? stock.isFund : /tdf|펀드|c-re|c-p|혼합자산|증권자/i.test(stock.name);
+                    const buyPriceDisplay = isFund ? '-' : fmt(stock.buyPrice || (stock.investAmount / stock.quantity));
+
                     let tr = document.createElement('tr');
                     tr.className = 'history-row';
                     tr.innerHTML = `
@@ -3096,6 +3324,7 @@
                                 코드: ${stock.ticker ? stock.ticker : '<strong>없음</strong>'}
                             </div>
                         </td>
+                        <td class="text-right">${buyPriceDisplay}</td>
                         <td class="text-right">${fmt(stock.currentPrice)}</td>
                         <td class="text-right">${stock.quantity.toLocaleString()}</td>
                         <td class="text-right">${fmt(stock.investAmount)}</td>
@@ -3115,7 +3344,7 @@
                 for (let i = pageItems.length; i < stockItemsPerPage; i++) {
                     let emptyTr = document.createElement('tr');
                     emptyTr.className = 'history-row';
-                    emptyTr.innerHTML = `<td colspan="9" style="border-bottom: 1px solid transparent;">&nbsp;</td>`;
+                    emptyTr.innerHTML = `<td colspan="10" style="border-bottom: 1px solid transparent;">&nbsp;</td>`;
                     stockTbody.appendChild(emptyTr);
                 }
                 renderStockPagination(totalPages);
@@ -3138,9 +3367,9 @@
                 // 분리 및 필터링 로직 동시 적용
                 const cashHistory = transactionHistory.filter(h => {
                     const txType = getHistoryType(h);
-                    if (txType !== TX_TYPE.EXTERNAL_IN && txType !== TX_TYPE.EXTERNAL_OUT && txType !== TX_TYPE.INTERNAL_TRANSFER) return false;
+                    if (txType !== TX_TYPE.EXTERNAL_IN && txType !== TX_TYPE.EXTERNAL_OUT && txType !== TX_TYPE.INTERNAL_TRANSFER && txType !== TX_TYPE.DIVIDEND_INTEREST) return false;
                     
-                    let typeText = txType === TX_TYPE.EXTERNAL_IN ? '입금' : (txType === TX_TYPE.EXTERNAL_OUT ? '출금' : '이체');
+                    let typeText = txType === TX_TYPE.EXTERNAL_IN ? '입금' : (txType === TX_TYPE.EXTERNAL_OUT ? '출금' : (txType === TX_TYPE.DIVIDEND_INTEREST ? '배당' : '이체'));
                     const typeMatch = historyTypeFilter ? typeText === historyTypeFilter : true;
                     const fromMatch = historyFromFilter ? h.from === historyFromFilter : true;
                     const toMatch = historyToFilter ? h.to === historyToFilter : true;
@@ -3192,15 +3421,17 @@
                         let isOut = txType === TX_TYPE.EXTERNAL_OUT;
                         let isNeutral = txType === TX_TYPE.INTERNAL_TRANSFER;
                         let isIn = txType === TX_TYPE.EXTERNAL_IN;
+                        let isDividend = txType === TX_TYPE.DIVIDEND_INTEREST;
 
                         let signStr = isOut ? '-' : (isNeutral ? '' : '+');
-                        let cssClass = isOut ? 'loss-text' : (isNeutral ? '' : 'cash-text');
+                        let cssClass = isOut ? 'loss-text' : (isNeutral ? '' : (isDividend ? 'dividend-text' : 'cash-text'));
 
                         let cleanFrom = history.from.replace(/\s*\((입금|출금)\)/g, '').trim();
                         let cleanTo = history.to.replace(/\s*\((입금|출금)\)/g, '').trim();
 
                         let typeBadge = '';
-                        if (isIn) typeBadge = '<span class="tag" style="background: rgba(16, 185, 129, 0.1); color: var(--cash); border: 1px solid rgba(16, 185, 129, 0.4);">입금</span>';
+                        if (isDividend) typeBadge = '<span class="tag" style="background: rgba(139, 92, 246, 0.1); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.4);">배당</span>';
+                        else if (isIn) typeBadge = '<span class="tag" style="background: rgba(16, 185, 129, 0.1); color: var(--cash); border: 1px solid rgba(16, 185, 129, 0.4);">입금</span>';
                         else if (isOut) typeBadge = '<span class="tag" style="background: rgba(59, 130, 246, 0.1); color: var(--loss); border: 1px solid rgba(59, 130, 246, 0.4);">출금</span>';
                         else typeBadge = '<span class="tag" style="background: rgba(148, 163, 184, 0.1); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.4);">이체</span>';
 
